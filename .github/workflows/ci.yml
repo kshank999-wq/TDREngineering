@@ -1,0 +1,62 @@
+# Continuous integration for the TDR Engineering website.
+#
+# Re-runs the checks that must pass before anything merges to main. These are
+# the same commands a contributor runs locally (see README.md), so a green run
+# here means the same thing as a clean local check.
+#
+# The build deliberately runs with no Supabase or email credentials: the public
+# marketing site must build and render without them (only the proposal form and
+# internal view need them at runtime). If a change ever makes the build require
+# a secret, this job is what catches it.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Supersede in-flight runs when a branch is pushed again — the older run's
+# result is no longer interesting.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Lint, typecheck and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` rather than `npm install`: it installs exactly what
+      # package-lock.json pins and fails if the lockfile is out of sync with
+      # package.json, which is a defect worth failing on.
+      - name: Install dependencies
+        run: npm ci
+
+      # Lint and typecheck run before the build. `next build` performs both
+      # internally, but running them separately first means a failure points at
+      # the actual problem instead of surfacing as a build error.
+      - name: Lint
+        run: npm run lint
+
+      # Covers scripts/archive-site.ts too — tsconfig includes it, even though
+      # it is not part of the Next.js build.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build

@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   TDR Engineering design tokens
+
+   The brief (spec §4) asks for modern, clean, fast, highly visual and
+   professional — explicitly not a generic survey-firm website. The palette is
+   built around a deep engineering navy with a precision-instrument cyan
+   accent, which reads as technical rather than corporate-generic.
+
+   TODO(tdr): replace `--color-brand-*` with the official brand values once the
+   logo files are recovered in the Phase 1A archive.
+   ========================================================================== */
+
+@theme {
+  --color-ink-950: #070d14;
+  --color-ink-900: #0b1622;
+  --color-ink-800: #12202f;
+  --color-ink-700: #1b2d40;
+  --color-ink-600: #2a4055;
+  --color-ink-400: #6b8299;
+  --color-ink-300: #94a8bb;
+  --color-ink-200: #c3d0dc;
+  --color-ink-100: #e2e9ef;
+  --color-ink-50: #f4f7fa;
+
+  --color-brand-600: #0f3d5c;
+  --color-brand-500: #14557f;
+  --color-brand-400: #1c76ad;
+
+  --color-accent-500: #00b4d8;
+  --color-accent-400: #22cbef;
+  --color-accent-300: #6fe0f7;
+
+  --color-signal-500: #f2a03d;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  --shadow-panel: 0 1px 2px rgb(7 13 20 / 0.06), 0 12px 32px -12px rgb(7 13 20 / 0.18);
+  --shadow-lift: 0 2px 4px rgb(7 13 20 / 0.05), 0 24px 48px -20px rgb(7 13 20 / 0.28);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: white;
+    color: var(--color-ink-900);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Respect the visitor's motion preference — the hero animates by default. */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent-500);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Headings use tighter tracking; body copy stays comfortable to read. */
+  h1, h2, h3, h4 {
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  p { text-wrap: pretty; }
+}
+
+@layer components {
+  .container-tdr {
+    width: 100%;
+    margin-inline: auto;
+    max-width: 80rem;
+    padding-inline: 1.25rem;
+  }
+
+  @media (min-width: 768px) {
+    .container-tdr { padding-inline: 2rem; }
+  }
+
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-accent-500);
+  }
+
+  .prose-tdr p {
+    margin-bottom: 1rem;
+    line-height: 1.75;
+    color: var(--color-ink-700);
+  }
+  .prose-tdr p:last-child { margin-bottom: 0; }
+}
+
+/* Hero overlay message rotation. Each message fades in, holds, fades out. */
+@keyframes tdr-rotate-message {
+  0%, 4%   { opacity: 0; transform: translateY(0.5rem); }
+  8%, 18%  { opacity: 1; transform: translateY(0); }
+  22%, 100% { opacity: 0; transform: translateY(-0.5rem); }
+}
+
+.hero-message {
+  animation: tdr-rotate-message 15s infinite;
+}
+
+@keyframes tdr-scan-sweep {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  10%  { opacity: 0.9; }
+  90%  { opacity: 0.9; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+.scan-sweep { animation: tdr-scan-sweep 6s ease-in-out infinite; }
