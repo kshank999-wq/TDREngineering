@@ -49,6 +49,10 @@ failing with a 500 when it is unconfigured.
 | `npm run lint` | ESLint |
 | `npm run archive:crawl` | Phase 1A legacy site archive (see below) |
 
+CI (`.github/workflows/ci.yml`) runs lint, typecheck and build on every pull
+request and on every push to `main`, so the same checks that pass locally are
+enforced before anything merges.
+
 ---
 
 ## Repository layout
