@@ -72,13 +72,31 @@ function log(message: string) {
   void appendFile(join(OUTPUT_DIR, "crawl-log.txt"), `${message}\n`).catch(() => {});
 }
 
-/** Strips the fragment and trailing slash so /about and /about/ are one page. */
+/**
+ * Collapses the spellings of a single page into one canonical URL, so the
+ * inventory carries one row per page rather than one per link style:
+ *
+ *   /about  /about/  /about#team   → /about
+ *   /  /index.html  /default.aspx  → /
+ *
+ * Without the directory-index rule, a site that links to both "/" and
+ * "/index.html" gets its homepage archived twice under two inventory rows —
+ * and whoever reviews the inventory has to notice and reconcile that by hand.
+ */
 function normalizeUrl(raw: string, base: string): string | null {
   try {
     const url = new URL(raw, base);
     if (url.origin !== origin) return null;
     if (!/^https?:$/.test(url.protocol)) return null;
     url.hash = "";
+
+    // Directory index → the directory itself. Applies at any depth, so
+    // /services/index.html collapses to /services.
+    url.pathname = url.pathname.replace(
+      /\/(index|default)\.(html?|php|aspx?|jsp)$/i,
+      "/",
+    );
+
     if (url.pathname.length > 1 && url.pathname.endsWith("/")) {
       url.pathname = url.pathname.slice(0, -1);
     }
@@ -90,7 +108,15 @@ function normalizeUrl(raw: string, base: string): string | null {
 
 function slugFor(url: string): string {
   const { pathname, search } = new URL(url);
-  const base = pathname === "/" ? "index" : pathname.replace(/^\//, "").replace(/\//g, "__");
+  const base =
+    pathname === "/"
+      ? "index"
+      : pathname
+          .replace(/^\//, "")
+          .replace(/\//g, "__")
+          // Drop the source extension; `.html` is appended when the file is
+          // written, and keeping both produced names like "about-us.html.html".
+          .replace(/\.(html?|php|aspx?|jsp)$/i, "");
   const suffix = search ? `__${search.replace(/[^a-zA-Z0-9]/g, "_")}` : "";
   return `${base}${suffix}`.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 150) || "page";
 }
@@ -110,18 +136,44 @@ function decodeEntities(value: string): string {
     .replace(/&nbsp;/g, " ");
 }
 
-/** Rough page categorisation to pre-sort the inventory for review. */
+/**
+ * Rough page categorisation to pre-sort the inventory for review.
+ *
+ * The URL path is weighted far more heavily than the title, because on a site
+ * like this one nearly every <title> ends in "TDR Engineering" — matching the
+ * title against /engineer/ would file the entire site under "Service".
+ *
+ * These are review hints, not decisions. A human sets `disposition` in
+ * inventory.csv regardless of what lands here.
+ */
 function categorize(url: string, title: string): string {
-  const haystack = `${url} ${title}`.toLowerCase();
-  if (/\/$|index|home/.test(new URL(url).pathname) && new URL(url).pathname.length <= 1)
-    return "Homepage";
-  if (/service|survey|engineer|scan|lidar|bim|revit|alta|boundary|topo/.test(haystack))
-    return "Service";
-  if (/project|portfolio|case|gallery/.test(haystack)) return "Project";
-  if (/about|team|staff|history|company/.test(haystack)) return "About";
-  if (/contact|quote|estimate|request/.test(haystack)) return "Contact / Quote";
-  if (/blog|news|article|post/.test(haystack)) return "News";
-  if (/faq|question/.test(haystack)) return "FAQ";
+  const path = new URL(url).pathname.toLowerCase();
+
+  if (path === "/" || /^\/(index|default|home)\.\w+$/.test(path)) return "Homepage";
+
+  // Specific page types first: an "About Us" page on an engineering site
+  // contains both "about" and "engineering", and "about" is the informative
+  // half.
+  const rules: [RegExp, string][] = [
+    [/contact|quote|estimate|request|rfp|proposal/, "Contact / Quote"],
+    [/about|team|staff|history|company|career|employ/, "About"],
+    [/project|portfolio|case-?stud|gallery|our-?work/, "Project"],
+    [/faq|question/, "FAQ"],
+    [/blog|news|article|post|press/, "News"],
+    [/privacy|terms|legal|sitemap|accessibility/, "Legal / Utility"],
+    [/service|survey|engineer|scan|lidar|bim|revit|alta|boundary|topo|grading|drainage/, "Service"],
+  ];
+
+  for (const [pattern, category] of rules) {
+    if (pattern.test(path)) return category;
+  }
+
+  // Only consult the title when the path was uninformative (e.g. "/p/1234").
+  const titleText = title.toLowerCase();
+  for (const [pattern, category] of rules) {
+    if (pattern.test(titleText)) return category;
+  }
+
   return "Other";
 }
 
