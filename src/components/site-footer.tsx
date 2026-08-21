@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { site } from "@/content/site";
+import { site, hasAddress, hasPhone } from "@/content/site";
 import { categories, servicesByCategory } from "@/content/services";
 
 export function SiteFooter() {
@@ -46,23 +46,35 @@ export function SiteFooter() {
             <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-white">
               Contact
             </h2>
+            {/* Each entry is omitted until the fact is verified, so an early
+                deploy shows a shorter footer rather than placeholder text. */}
             <ul className="mt-4 space-y-3 text-sm text-ink-300">
-              <li>
-                <a href={site.phoneHref} className="hover:text-white">
-                  {site.phone}
-                </a>
-              </li>
+              {hasPhone ? (
+                <li>
+                  <a href={site.phoneHref} className="hover:text-white">
+                    {site.phone}
+                  </a>
+                </li>
+              ) : null}
               <li>
                 <a href={`mailto:${site.email}`} className="hover:text-white">
                   {site.email}
                 </a>
               </li>
-              <li className="pt-1 leading-relaxed">
-                {site.address.street}
-                <br />
-                {site.address.city}, {site.address.region} {site.address.postalCode}
-              </li>
-              <li className="pt-1">{site.hours}</li>
+              {hasAddress ? (
+                <li className="pt-1 leading-relaxed">
+                  {site.address.street}
+                  {site.address.street2 ? (
+                    <>
+                      <br />
+                      {site.address.street2}
+                    </>
+                  ) : null}
+                  <br />
+                  {site.address.city}, {site.address.region} {site.address.postalCode}
+                </li>
+              ) : null}
+              {site.hours ? <li className="pt-1">{site.hours}</li> : null}
             </ul>
             <ul className="mt-6 space-y-2 text-sm text-ink-300">
               <li>

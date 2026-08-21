@@ -44,6 +44,12 @@ Everything marked ⚙️ beyond those is content that improves the site but does
 stop it going live. The placeholders are honest rather than broken: the hero
 animates, the comparison works, the pages read as complete.
 
+Run `npm run check:content` for the current list, and see
+`docs/CONTENT-REQUIRED.md` for exactly what to supply. Unverified business
+facts are stored as empty strings and omitted at render rather than printed, so
+a premature deploy is safe — but not launch-ready, which
+`npm run check:content -- --strict` is what enforces.
+
 ---
 
 ## Out of scope for Phase 1

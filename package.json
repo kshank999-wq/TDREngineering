@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "check:content": "tsx scripts/check-content.ts",
     "archive:crawl": "tsx scripts/archive-site.ts"
   },
   "dependencies": {

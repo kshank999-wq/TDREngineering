@@ -60,3 +60,11 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Report-only on purpose. These are content gaps waiting on TDR, not code
+      # defects, so failing the build on them would leave main permanently red
+      # and train everyone to ignore it. The list prints on every run, and the
+      # launch checklist runs the strict form, which does fail:
+      #   npm run check:content -- --strict
+      - name: Content readiness (report only)
+        run: npm run check:content

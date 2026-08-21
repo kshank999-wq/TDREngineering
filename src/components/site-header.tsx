@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { navigation, site } from "@/content/site";
+import { navigation, site, hasPhone } from "@/content/site";
 
 /**
  * Primary navigation (spec §4).
@@ -104,12 +104,14 @@ export function SiteHeader() {
                 {item.label}
               </Link>
             ))}
-            <a
-              href={site.phoneHref}
-              className="mt-2 rounded-md bg-ink-50 px-2 py-3 text-base font-medium text-ink-800"
-            >
-              Call {site.phone}
-            </a>
+            {hasPhone ? (
+              <a
+                href={site.phoneHref}
+                className="mt-2 rounded-md bg-ink-50 px-2 py-3 text-base font-medium text-ink-800"
+              >
+                Call {site.phone}
+              </a>
+            ) : null}
           </div>
         </nav>
       ) : null}

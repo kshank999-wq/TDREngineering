@@ -3,11 +3,14 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui";
 import { ContactForm } from "@/components/contact-form";
 import { env } from "@/lib/env";
-import { site } from "@/content/site";
+import { site, hasAddress, hasPhone } from "@/content/site";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: `Contact TDR Engineering — call ${site.phone}, email ${site.email}, or send a message about land surveying, civil engineering or 3D scanning.`,
+  // The phone number is only named in the description once it is known.
+  description: hasPhone
+    ? `Contact TDR Engineering — call ${site.phone}, email ${site.email}, or send a message about land surveying, civil engineering or 3D scanning.`
+    : `Contact TDR Engineering — email ${site.email} or send a message about land surveying, civil engineering or 3D scanning.`,
   alternates: { canonical: "/contact" },
 };
 
@@ -29,15 +32,22 @@ export default function ContactPage() {
               <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-ink-500">
                 Reach TDR directly
               </h2>
+              {/* Unverified facts are omitted, not rendered as placeholders —
+                  a missing office block is recoverable, a wrong address is not. */}
               <ul className="mt-5 space-y-4">
-                <li>
-                  <span className="block text-xs font-semibold uppercase tracking-[0.12em] text-ink-400">
-                    Phone
-                  </span>
-                  <a href={site.phoneHref} className="mt-1 block font-semibold text-ink-900 hover:text-brand-500">
-                    {site.phone}
-                  </a>
-                </li>
+                {hasPhone ? (
+                  <li>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.12em] text-ink-400">
+                      Phone
+                    </span>
+                    <a
+                      href={site.phoneHref}
+                      className="mt-1 block font-semibold text-ink-900 hover:text-brand-500"
+                    >
+                      {site.phone}
+                    </a>
+                  </li>
+                ) : null}
                 <li>
                   <span className="block text-xs font-semibold uppercase tracking-[0.12em] text-ink-400">
                     Email
@@ -49,22 +59,32 @@ export default function ContactPage() {
                     {site.email}
                   </a>
                 </li>
-                <li>
-                  <span className="block text-xs font-semibold uppercase tracking-[0.12em] text-ink-400">
-                    Office
-                  </span>
-                  <address className="mt-1 text-sm leading-relaxed text-ink-700 not-italic">
-                    {site.address.street}
-                    <br />
-                    {site.address.city}, {site.address.region} {site.address.postalCode}
-                  </address>
-                </li>
-                <li>
-                  <span className="block text-xs font-semibold uppercase tracking-[0.12em] text-ink-400">
-                    Hours
-                  </span>
-                  <p className="mt-1 text-sm text-ink-700">{site.hours}</p>
-                </li>
+                {hasAddress ? (
+                  <li>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.12em] text-ink-400">
+                      Office
+                    </span>
+                    <address className="mt-1 text-sm leading-relaxed text-ink-700 not-italic">
+                      {site.address.street}
+                      {site.address.street2 ? (
+                        <>
+                          <br />
+                          {site.address.street2}
+                        </>
+                      ) : null}
+                      <br />
+                      {site.address.city}, {site.address.region} {site.address.postalCode}
+                    </address>
+                  </li>
+                ) : null}
+                {site.hours ? (
+                  <li>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.12em] text-ink-400">
+                      Hours
+                    </span>
+                    <p className="mt-1 text-sm text-ink-700">{site.hours}</p>
+                  </li>
+                ) : null}
               </ul>
             </div>
 

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeader, Section, SectionHeading, CheckList, ProposalCta } from "@/components/ui";
-import { site } from "@/content/site";
+import { site, hasPhone } from "@/content/site";
 
 export const metadata: Metadata = {
   title: "About TDR Engineering",
@@ -76,17 +76,21 @@ export default function AboutPage() {
                 Contact
               </h2>
               <ul className="mt-5 space-y-3 text-ink-800">
-                <li>
-                  <a href={site.phoneHref} className="font-semibold hover:text-brand-500">
-                    {site.phone}
-                  </a>
-                </li>
+                {hasPhone ? (
+                  <li>
+                    <a href={site.phoneHref} className="font-semibold hover:text-brand-500">
+                      {site.phone}
+                    </a>
+                  </li>
+                ) : null}
                 <li>
                   <a href={`mailto:${site.email}`} className="font-semibold hover:text-brand-500">
                     {site.email}
                   </a>
                 </li>
-                <li className="text-sm text-ink-600">{site.hours}</li>
+                {site.hours ? (
+                  <li className="text-sm text-ink-600">{site.hours}</li>
+                ) : null}
               </ul>
             </div>
           </aside>

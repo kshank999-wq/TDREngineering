@@ -47,6 +47,7 @@ failing with a 500 when it is unconfigured.
 | `npm run build` | Production build |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
+| `npm run check:content` | List content still awaiting TDR (spec §22) |
 | `npm run archive:crawl` | Phase 1A legacy site archive (see below) |
 
 CI (`.github/workflows/ci.yml`) runs lint, typecheck and build on every pull
@@ -117,21 +118,28 @@ Independent of this repository. `docs/EMAIL-MIGRATION.md`.
 
 ## What still needs TDR
 
-Search the codebase for `TODO(tdr)` — each one marks a placeholder that needs a
-real value before launch:
+The code is complete; what remains is business facts only TDR can supply —
+contact details, logo, hero footage, real survey comparison imagery, project
+examples, About-page content and licensure, and the legacy redirect map.
 
-* Company phone, address and hours (`src/content/site.ts`)
-* Official logo and brand colors
-* Hero promotional video and poster (`heroMedia` in `src/content/site.ts`)
-* Real before/after imagery for "Does Your Survey Look Like This?"
-* Approved project examples (`src/content/projects.ts`)
-* About-page company history and staff content
-* The verified legacy redirect map (`src/content/redirects.ts`)
+```bash
+npm run check:content            # list what is still outstanding
+npm run check:content -- --strict  # exits 1 if anything blocking remains
+```
 
-Every public marketing claim must be approved by TDR before publication
-(spec §4).
+**`docs/CONTENT-REQUIRED.md` is the list**, with a paste-back template for the
+contact details and encoding specs for the media.
 
----
+Unverified facts are deliberately stored as empty strings rather than
+placeholder text, and every component omits what is unset. A premature deploy
+therefore shows a contact page with no address rather than one reading
+"TODO: street address" — and never a phone link to a number that dials nothing.
+That makes the gaps safe but silent, which is what `check:content` exists to
+make loud again. CI prints the report on every run; the launch checklist runs
+the strict form.
+
+Separately, every public marketing claim must be approved by TDR before
+publication (spec §4).
 
 ## Documentation
 
@@ -144,5 +152,6 @@ Every public marketing claim must be approved by TDR before publication
 | `docs/SEO-AND-LAUNCH.md` | Spec §14, §21 — redirects, web basics, launch sequence |
 | `docs/BACKUP-AND-RECOVERY.md` | Spec §15 — backups, exports, recovery drills |
 | `docs/ARCHITECTURE.md` | Spec §11, §18–20 — data model and future-module notes |
+| `docs/CONTENT-REQUIRED.md` | What TDR must supply, with paste-back templates |
 | `docs/DEFINITION-OF-DONE.md` | Spec §22 — the launch checklist with current status |
 | `supabase/README.md` | Applying migrations, RLS model, creating admin users |

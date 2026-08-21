@@ -5,7 +5,7 @@ import { SurveyComparison } from "@/components/survey-comparison";
 import { Section, SectionHeading, Card, ButtonLink, CheckList } from "@/components/ui";
 import { categories, servicesByCategory } from "@/content/services";
 import { faqs } from "@/content/faqs";
-import { site } from "@/content/site";
+import { site, hasPhone } from "@/content/site";
 
 export const metadata: Metadata = {
   title: "Land Surveying, Civil Engineering & 3D Scanning",
@@ -296,17 +296,21 @@ export default function HomePage() {
             </p>
           </div>
           <dl className="grid gap-6 sm:grid-cols-2">
-            <ContactItem label="Phone">
-              <a href={site.phoneHref} className="hover:text-brand-500">
-                {site.phone}
-              </a>
-            </ContactItem>
+            {hasPhone ? (
+              <ContactItem label="Phone">
+                <a href={site.phoneHref} className="hover:text-brand-500">
+                  {site.phone}
+                </a>
+              </ContactItem>
+            ) : null}
             <ContactItem label="Email">
               <a href={`mailto:${site.email}`} className="hover:text-brand-500">
                 {site.email}
               </a>
             </ContactItem>
-            <ContactItem label="Office hours">{site.hours}</ContactItem>
+            {site.hours ? (
+              <ContactItem label="Office hours">{site.hours}</ContactItem>
+            ) : null}
             <ContactItem label="Send a message">
               <Link href="/contact" className="hover:text-brand-500">
                 Contact form →

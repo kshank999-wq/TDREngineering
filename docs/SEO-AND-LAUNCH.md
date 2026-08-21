@@ -88,7 +88,7 @@ Work top to bottom. Do not start until Phase 1A is complete and archived.
 | --- | --- | --- |
 | 1 | Legacy site archived and stored in TDR-controlled storage | ☐ |
 | 2 | Inventory dispositions complete; redirect map filled in | ☐ |
-| 3 | All `TODO(tdr)` placeholders replaced with real content | ☐ |
+| 3 | `npm run check:content -- --strict` passes (see `docs/CONTENT-REQUIRED.md`) | ☐ |
 | 4 | All marketing claims reviewed and approved by TDR (spec §4) | ☐ |
 | 5 | Supabase migrations applied to the production project | ☐ |
 | 6 | Two TDR owner-role admin accounts created and tested | ☐ |

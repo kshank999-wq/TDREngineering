@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { site } from "@/content/site";
+import { site, addressLine, hasPhone } from "@/content/site";
 import { env } from "@/lib/env";
 import "./globals.css";
 
@@ -60,7 +60,12 @@ function organizationJsonLd() {
     name: site.legalName,
     url: site.url,
     description: site.description,
-    telephone: site.phone,
+    // Omitted entirely until verified — publishing an empty or invented
+    // telephone/address into structured data feeds it to search engines and
+    // map providers, where a wrong value is far harder to retract than a
+    // missing one.
+    ...(hasPhone ? { telephone: site.phone } : {}),
+    ...(addressLine ? { address: addressLine } : {}),
     email: site.email,
     areaServed: "US",
     knowsAbout: [

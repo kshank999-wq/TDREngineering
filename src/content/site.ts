@@ -2,9 +2,21 @@
  * Single source of truth for company-level facts used across metadata,
  * structured data, the footer and the contact page.
  *
- * NOTE FOR TDR: the placeholder values below are marked `TODO(tdr)` and must be
- * replaced with the verified values captured during the Phase 1A archive before
- * production launch (spec §3, §22).
+ * NOTE FOR TDR — how the unknowns are handled here
+ * ------------------------------------------------
+ * A business fact nobody has verified yet is the **empty string**, never
+ * invented placeholder text and never a stand-in value. Two reasons:
+ *
+ *   1. Every component below omits what is unset rather than rendering it, so
+ *      a premature deploy shows a contact page with no address instead of one
+ *      reading "TODO(tdr): street address" — and never a phone link to a
+ *      number that dials nothing.
+ *   2. A plausible-looking wrong value (a 555 phone number, a guessed suite
+ *      number) is far more dangerous than a blank, because it survives review.
+ *      Blanks are visible; plausible fabrications are not.
+ *
+ * Run `npm run check:content` to list everything still unset or still assumed.
+ * The launch checklist requires it to come back clean (spec §22).
  */
 export const site = {
   name: "TDR Engineering",
@@ -13,19 +25,49 @@ export const site = {
   description:
     "TDR Engineering delivers land surveying, civil engineering, and 3D laser scanning with high-detail deliverables, fast turnaround, and competitive pricing.",
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://www.tdrengineering.com",
-  // TODO(tdr): confirm against the legacy site archive before launch.
-  phone: "(000) 000-0000",
-  phoneHref: "tel:+10000000000",
-  email: "info@tdrengineering.com",
+
+  // --- Unverified: supply from the Phase 1A archive (spec §3) -------------
+  /** Display form, e.g. "(626) 555-0142". */
+  phone: "",
+  /** Dial form, e.g. "tel:+16265550142". Must match `phone`. */
+  phoneHref: "",
+  /** Business hours as displayed, e.g. "Monday – Friday, 8:00 AM – 5:00 PM". */
+  hours: "",
   address: {
-    street: "TODO(tdr): street address",
-    city: "TODO(tdr): city",
-    region: "CA",
-    postalCode: "00000",
+    street: "",
+    /** Second line — suite or unit. Optional; blank is a valid final answer. */
+    street2: "",
+    city: "",
+    /** Two-letter state code. */
+    region: "",
+    postalCode: "",
     country: "US",
   },
-  hours: "Monday – Friday, 8:00 AM – 5:00 PM",
+
+  // --- Assumed, needs confirmation ---------------------------------------
+  /**
+   * Conventional default. It is also the EMAIL_REPLY_TO default in
+   * .env.example, so if TDR uses a different public address, change both.
+   */
+  email: "info@tdrengineering.com",
 } as const;
+
+/** True once a mailing address is known well enough to publish. */
+export const hasAddress = Boolean(site.address.street && site.address.city);
+
+/** True once a phone number is known. Both forms must be present to publish. */
+export const hasPhone = Boolean(site.phone && site.phoneHref);
+
+/** Single-line address for structured data. Empty when the address is unset. */
+export const addressLine = hasAddress
+  ? [
+      site.address.street,
+      site.address.street2,
+      `${site.address.city}, ${site.address.region} ${site.address.postalCode}`.trim(),
+    ]
+      .filter(Boolean)
+      .join(", ")
+  : "";
 
 export const navigation = [
   { href: "/", label: "Home" },
