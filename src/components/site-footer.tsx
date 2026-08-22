@@ -105,7 +105,22 @@ export function SiteFooter() {
           <p>
             © {year} {site.legalName}. All rights reserved.
           </p>
-          <p>{site.tagline}</p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <p>{site.tagline}</p>
+            {/* Staff sign-in. Deliberately kept to a muted footer link rather
+                than the main navigation: the nav speaks to prospects, and spec
+                §4 asks that login functionality not be prominent at launch.
+                `nofollow` plus the /admin disallow in robots.ts keeps it out of
+                search results — the actual protection is authentication and
+                RLS, not obscurity. */}
+            <Link
+              href="/admin/login"
+              rel="nofollow"
+              className="text-ink-500 transition-colors hover:text-ink-300"
+            >
+              Staff login
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
