@@ -719,6 +719,25 @@ export const requestableServices = services.filter((s) => s.requestable);
 
 export const serviceByCode = (code: string) => services.find((s) => s.code === code);
 
+/**
+ * Conditional-question `name` → human label.
+ *
+ * `opportunities.service_details` is keyed by the stable question name
+ * (`arch_scope`) rather than the label, because labels get reworded and keys
+ * must not. Anything showing those answers to a person resolves them through
+ * here, so staff read "What needs to be surveyed?" instead of `arch_scope`.
+ *
+ * Falls back to the raw key, so an answer stored against a question that has
+ * since been removed still displays rather than vanishing.
+ */
+const questionLabels: Record<string, string> = Object.fromEntries(
+  services.flatMap((service) =>
+    (service.questions ?? []).map((question) => [question.name, question.label]),
+  ),
+);
+
+export const questionLabel = (name: string) => questionLabels[name] ?? name;
+
 export const serviceCodes = new Set(services.map((s) => s.code));
 
 export const propertyTypes = [

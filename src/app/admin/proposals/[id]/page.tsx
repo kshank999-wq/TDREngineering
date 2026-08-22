@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { supabaseServer, getStaffUser } from "@/lib/supabase/server";
 import { opportunityStatuses, statusLabel, statusTone, statusClasses } from "@/content/statuses";
 import { referralSourceByCode } from "@/content/referrals";
+import { questionLabel } from "@/content/services";
 import { formatBytes } from "@/lib/uploads";
 import { updateStatus, addNote } from "./actions";
 
@@ -225,7 +226,12 @@ export default async function ProposalDetailPage({ params }: Params) {
                   {Object.entries(serviceDetails).map(([key, value]) =>
                     value ? (
                       <p key={key} className="text-sm text-ink-800">
-                        <span className="font-medium text-ink-600">{key}:</span> {value}
+                        {/* Stored against the stable question name; shown as
+                            the question a person was actually asked. */}
+                        <span className="font-medium text-ink-600">
+                          {questionLabel(key)}
+                        </span>{" "}
+                        {value}
                       </p>
                     ) : null,
                   )}
