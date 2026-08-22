@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { ChromeGate } from "@/components/chrome-gate";
 import { site, addressLine, hasPhone } from "@/content/site";
 import { env } from "@/lib/env";
 import "./globals.css";
@@ -93,11 +94,15 @@ export default function RootLayout({
         >
           Skip to content
         </a>
-        <SiteHeader />
+        <ChromeGate>
+          <SiteHeader />
+        </ChromeGate>
         <main id="main" className="flex-1">
           {children}
         </main>
-        <SiteFooter />
+        <ChromeGate>
+          <SiteFooter />
+        </ChromeGate>
 
         <script
           type="application/ld+json"
