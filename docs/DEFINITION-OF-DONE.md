@@ -8,7 +8,7 @@ Legend: ✅ built and verified · ⚙️ built, needs TDR action or real content
 | # | Criterion | Status | Notes |
 | --- | --- | --- | --- |
 | 1 | Existing TDR website independently archived and inventoried | ⚙️ | Crawler built (`npm run archive:crawl`); must be **run against the live legacy site** and the output stored in TDR storage. `docs/PHASE-1A-ARCHIVE.md` |
-| 2 | TDR controls GitHub, Vercel, Supabase, DNS and production credentials | 👤 | Checklist and verification procedure in `docs/OWNERSHIP-AND-ACCOUNTS.md` |
+| 2 | TDR controls GitHub, Vercel, Supabase, DNS and production credentials | 👤 | Checklist and verification procedure in `docs/OWNERSHIP-AND-ACCOUNTS.md`, with an interactive/printable [control sheet](https://claude.ai/code/artifact/e04633af-8b13-463e-9c32-d89f23f19fa3) |
 | 3 | New homepage and primary service pages are operational | ✅ | Homepage plus 24 generated service pages, `/3d-scanning`, `/about`, `/projects`, `/questions`, `/contact` |
 | 4 | Promotional hero presentation is operational | ⚙️ | Hero implemented with video + poster + rotating overlay messages; renders an animated reality-capture graphic until TDR supplies footage. Set `heroMedia` in `src/content/site.ts` |
 | 5 | 3D scanning / technology advantage is prominently presented | ✅ | Hero, homepage value proposition, "Why TDR" pillars, and a dedicated `/3d-scanning` page |

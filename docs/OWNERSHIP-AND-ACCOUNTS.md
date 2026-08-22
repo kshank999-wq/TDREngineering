@@ -9,6 +9,32 @@ can be rebuilt; a domain registrar account nobody at TDR can log into cannot.
 
 ---
 
+## Working copy
+
+**[TDR Ownership Control Sheet](https://claude.ai/code/artifact/e04633af-8b13-463e-9c32-d89f23f19fa3)**
+— the same fifteen assets as an interactive sheet. Progress saves automatically
+and is shared, so whoever picks it up next sees where the last person stopped.
+
+To take it into the field, open it and print with **Ctrl / Cmd + P**. It lays
+out as a form: five tickable boxes per asset, ruled lines for names and notes,
+and a sign-off block for who completed the sheet and when. Anything already
+ticked on screen prints filled, so a part-finished sheet stays truthful on
+paper. Nine pages on US Letter.
+
+The sheet is private until shared from its own share menu. Since this document
+requires a *second* TDR administrator on every account, share it with that
+person rather than working through it alone.
+
+> **Never record credentials on the sheet, or in this file.** Both track
+> *status* only. Passwords, API keys, MFA backup codes and recovery answers
+> belong in the password manager — the name fields record *who holds* an
+> account, not how to get into it.
+
+This markdown file remains the canonical text. If the two ever disagree,
+this one is right.
+
+---
+
 ## The rule
 
 For **every** asset below:
