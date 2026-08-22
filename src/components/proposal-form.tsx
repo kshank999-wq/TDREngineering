@@ -73,7 +73,11 @@ const initialValues: Values = {
   company: "",
   email: "",
   phone: "",
-  preferredContact: "",
+  // Pre-selected rather than blank: the field tells staff whether to call or
+  // email, and left empty it simply gets skipped — as it was on the first real
+  // submission. Email is the safe default because it is the least intrusive
+  // channel to be wrong about.
+  preferredContact: "Email",
   projectAddress: "",
   city: "",
   state: "",
