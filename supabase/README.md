@@ -46,19 +46,60 @@ RLS is enabled on every table and denies by default.
   `/api/inquiries`, which use the **service role key** server-side. That key
   must never be exposed to the browser.
 
-## Creating the first admin user
+## Verifying the migration landed
+
+Run this after `0001` and `0002`. It should report 13 tables, 27 services,
+10 referral sources, and RLS enabled everywhere.
+
+```sql
+select
+  (select count(*) from pg_tables
+     where schemaname = 'public'
+       and tablename in ('app_users','companies','contacts','properties','services',
+                         'referral_sources','opportunities','opportunity_services',
+                         'referrals','files','website_inquiries','opportunity_notes',
+                         'opportunity_status_history'))            as tables_created,
+  (select count(*) from services)                                  as services_seeded,
+  (select count(*) from referral_sources)                          as referral_sources_seeded,
+  (select count(*) from pg_tables
+     where schemaname = 'public' and not rowsecurity)              as tables_without_rls,
+  (select count(*) from storage.buckets where id = 'proposal-uploads'
+     and public = false)                                           as private_bucket;
+```
+
+Expected: `13 | 27 | 10 | 0 | 1`.
+
+`tables_without_rls` must be **0**. Anything else means a table is publicly
+readable and the migration should be re-run before going further.
+
+## Creating the first admin users
 
 1. Supabase dashboard → Authentication → Users → **Add user**. Use a
-   TDR-controlled address and a strong password.
-2. Run in the SQL editor, substituting the new user's id and email:
+   TDR-controlled address and a strong password. Do this **twice** — spec §2
+   requires at least two TDR-controlled owner accounts so no single person can
+   be locked out of the database.
+2. Run in the SQL editor, with the addresses you just created. This looks the
+   accounts up by email rather than asking you to copy UUIDs by hand, and is
+   safe to re-run:
 
 ```sql
 insert into app_users (id, email, full_name, role)
-values ('<auth-user-uuid>', 'owner@tdrengineering.com', 'TDR Owner', 'owner');
+select u.id, u.email, v.full_name, 'owner'
+  from auth.users u
+  join (values
+          ('owner@tdrengineering.com',  'TDR Owner'),
+          ('backup@tdrengineering.com', 'TDR Second Owner')
+       ) as v(email, full_name) on lower(u.email) = lower(v.email)
+on conflict (id) do update
+  set role = 'owner', is_active = true, archived_at = null,
+      full_name = excluded.full_name;
+
+-- Confirm both landed. Two rows, both role=owner, both is_active.
+select email, role, is_active from app_users order by email;
 ```
 
-Per spec §2, create **at least two** owner-role accounts controlled by TDR so
-no single person can be locked out of the database.
+If a row is missing, the auth user for that address does not exist yet — go
+back to step 1 rather than editing this query.
 
 ## Backups
 
