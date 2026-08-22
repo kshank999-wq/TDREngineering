@@ -115,13 +115,43 @@ export default async function ProposalDetailPage({ params }: Params) {
             {opportunity.source ? ` · via ${opportunity.source}` : ""}
           </p>
         </div>
-        <span
-          className={`inline-flex rounded-full px-4 py-1.5 text-sm font-semibold ring-1 ${
-            statusClasses[statusTone(opportunity.status as string)]
-          }`}
-        >
-          {statusLabel(opportunity.status as string)}
-        </span>
+        {/* Changing status is the primary action on this page, so the control
+            lives in the header rather than the sidebar — the sidebar stacks
+            below five read-only panels under 1024px, which put the main action
+            off the bottom of the screen on any laptop-width window. */}
+        <div className="flex flex-wrap items-center gap-3">
+          <span
+            className={`inline-flex rounded-full px-4 py-1.5 text-sm font-semibold ring-1 ${
+              statusClasses[statusTone(opportunity.status as string)]
+            }`}
+          >
+            {statusLabel(opportunity.status as string)}
+          </span>
+          <form action={updateStatus} className="flex items-center gap-2">
+            <input type="hidden" name="id" value={opportunity.id as string} />
+            <label htmlFor="status" className="sr-only">
+              Change status
+            </label>
+            <select
+              id="status"
+              name="status"
+              defaultValue={opportunity.status as string}
+              className="rounded-md border border-ink-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
+            >
+              {opportunityStatuses.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-500"
+            >
+              Update
+            </button>
+          </form>
+        </div>
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_22rem]">
@@ -278,34 +308,10 @@ export default async function ProposalDetailPage({ params }: Params) {
         </div>
 
         <aside className="space-y-6">
-          <Panel title="Status">
-            <form action={updateStatus} className="space-y-3">
-              <input type="hidden" name="id" value={opportunity.id as string} />
-              <label htmlFor="status" className="sr-only">
-                Change status
-              </label>
-              <select
-                id="status"
-                name="status"
-                defaultValue={opportunity.status as string}
-                className="w-full rounded-md border border-ink-200 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
-              >
-                {opportunityStatuses.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                className="w-full rounded-md bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-500"
-              >
-                Update status
-              </button>
-            </form>
-
+          {/* The control moved to the header; the audit trail stays here. */}
+          <Panel title="Status history">
             {(history ?? []).length > 0 ? (
-              <ol className="mt-5 space-y-2 border-t border-ink-100 pt-4">
+              <ol className="space-y-2">
                 {(history ?? []).map((entry) => (
                   <li key={entry.id as string} className="text-xs text-ink-500">
                     {statusLabel((entry.from_status as string) ?? "—")} →{" "}
@@ -316,7 +322,12 @@ export default async function ProposalDetailPage({ params }: Params) {
                   </li>
                 ))}
               </ol>
-            ) : null}
+            ) : (
+              <p className="text-sm text-ink-500">
+                No status changes yet. Every change is recorded here
+                automatically.
+              </p>
+            )}
           </Panel>
 
           <Panel title="Internal notes">
