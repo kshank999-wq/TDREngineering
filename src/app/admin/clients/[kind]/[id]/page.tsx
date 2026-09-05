@@ -5,6 +5,7 @@ import { supabaseServer, getStaffUser } from "@/lib/supabase/server";
 import { statusLabel, statusTone, statusClasses } from "@/content/statuses";
 import { AddressForm, type Address } from "@/components/admin/address-form";
 import { ShippingPanel } from "@/components/admin/shipping-panel";
+import { MergePanel } from "@/components/admin/merge-panel";
 import { isShippingConfigured, isShippoTestMode } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Client" };
@@ -417,6 +418,15 @@ export default async function ClientDetailPage({ params }: Params) {
               configured={isShippingConfigured()}
               testMode={isShippoTestMode()}
             />
+          </section>
+
+          <section className="rounded-xl border border-ink-200 bg-white p-6">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-500">
+              Duplicates
+            </h2>
+            <div className="mt-4">
+              <MergePanel kind={kind} id={id} name={displayName} />
+            </div>
           </section>
         </aside>
       </div>

@@ -11,10 +11,10 @@ supabase link --project-ref <project-ref>
 supabase db push
 ```
 
-**SQL editor (fallback):** paste `migrations/0001_init.sql`, then
-`migrations/0002_storage.sql`, then `migrations/0003_shipping.sql` into the
-project SQL editor and run them in that order. All three are idempotent and
-safe to re-run.
+**SQL editor (fallback):** paste each file's *contents* — not its path — into
+the project SQL editor and run them in filename order: `0001_init.sql`,
+`0002_storage.sql`, `0003_shipping.sql`, `0004_merge.sql`. All are idempotent
+and safe to re-run.
 
 ## What the schema gives you
 
@@ -32,8 +32,15 @@ safe to re-run.
 | `opportunity_notes`, `opportunity_status_history` | Internal notes and an audit trail of status changes |
 | `shipments` | Every shipping label bought, with the address it was printed with frozen at purchase (`0003`) |
 
+Duplicate client records are merged by `merge_contacts()` / `merge_companies()`
+(`0004`) — one atomic function each, staff-gated in the database. The losing
+record is archived with `merged_into_id` set, never deleted. See
+`docs/MERGING-CLIENTS.md`.
+
 `v_client_directory` unions contacts and companies into one searchable list so
-the admin can find a person or a firm in a single query (`0003`).
+the admin can find a person or a firm in a single query (`0003`), and
+`v_duplicate_clients` pairs up records that share an email, phone or name
+(`0004`).
 
 `v_opportunity_search` joins all of it into one row per opportunity with a
 `search_text` column covering client name, company, email, phone, project

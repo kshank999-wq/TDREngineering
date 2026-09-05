@@ -155,4 +155,5 @@ publication (spec §4).
 | `docs/CONTENT-REQUIRED.md` | What TDR must supply, with paste-back templates |
 | `docs/DEFINITION-OF-DONE.md` | Spec §22 — the launch checklist with current status |
 | `docs/SHIPPING.md` | Printing shipping labels from a client record (Shippo) |
+| `docs/MERGING-CLIENTS.md` | Finding and merging duplicate client records |
 | `supabase/README.md` | Applying migrations, RLS model, creating admin users |

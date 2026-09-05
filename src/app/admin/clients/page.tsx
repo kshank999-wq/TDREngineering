@@ -40,6 +40,13 @@ export default async function ClientsPage({ searchParams }: { searchParams: Sear
   const { data: rows, count, error } = await request;
   const pages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
 
+  // Surfaced here rather than in the nav: duplicates are worth acting on when
+  // you are already looking at the list, not as a permanent badge.
+  const { count: duplicateCountRaw } = await supabase
+    .from("v_duplicate_clients")
+    .select("a_id", { count: "exact", head: true });
+  const duplicateCount = duplicateCountRaw ?? 0;
+
   return (
     <div className="container-tdr py-10">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -49,6 +56,14 @@ export default async function ClientsPage({ searchParams }: { searchParams: Sear
             Everyone in the database — clients and referring professionals alike.
           </p>
         </div>
+        {duplicateCount > 0 ? (
+          <Link
+            href="/admin/clients/duplicates"
+            className="rounded-md border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-900 hover:bg-amber-100"
+          >
+            {duplicateCount} possible duplicate{duplicateCount === 1 ? "" : "s"} — review
+          </Link>
+        ) : null}
       </div>
 
       <form
