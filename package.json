@@ -10,6 +10,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "check:content": "tsx scripts/check-content.ts",
+    "check:actions": "tsx scripts/check-server-actions.ts",
     "check:shipping": "tsx --conditions=react-server scripts/check-shipping.ts",
     "archive:crawl": "tsx scripts/archive-site.ts"
   },

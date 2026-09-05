@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { saveAddress, emptyAddressState } from "@/app/admin/clients/[kind]/[id]/actions";
+import { saveAddress, type AddressState } from "@/app/admin/clients/[kind]/[id]/actions";
 
 /**
  * The mailing address a label gets printed with.
@@ -30,7 +30,11 @@ export function AddressForm({
   id: string;
   address: Address;
 }) {
-  const [state, formAction] = useActionState(saveAddress, emptyAddressState);
+  // Declared here rather than alongside the action: a "use server" file can
+  // export only async functions, so a shared initial-state constant there
+  // brings the whole route down at runtime.
+  const initial: AddressState = { status: "idle", message: "" };
+  const [state, formAction] = useActionState(saveAddress, initial);
 
   return (
     <form action={formAction} className="space-y-4">

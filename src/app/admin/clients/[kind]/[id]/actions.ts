@@ -27,9 +27,10 @@ function assertKind(value: string): Kind {
 
 // ----------------------------------------------------------- address ------
 
+// Types only. A "use server" file may export nothing but async functions —
+// anything else throws when the module loads, which the build does not catch.
+// The form's initial state therefore lives in the component, not here.
 export type AddressState = { status: "idle" | "saved" | "error"; message: string };
-
-export const emptyAddressState: AddressState = { status: "idle", message: "" };
 
 /**
  * Saves the mailing address. Returns a result rather than throwing so a failed

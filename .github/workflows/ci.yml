@@ -58,6 +58,12 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # A "use server" file may export only async functions. Next enforces that
+      # when the module loads, so the build, tsc and ESLint all pass and the
+      # route 500s on first use instead. This shipped to production once.
+      - name: Server action exports
+        run: npm run check:actions
+
       - name: Build
         run: npm run build
 
