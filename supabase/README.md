@@ -11,9 +11,10 @@ supabase link --project-ref <project-ref>
 supabase db push
 ```
 
-**SQL editor (fallback):** paste `migrations/0001_init.sql` then
-`migrations/0002_storage.sql` into the project SQL editor and run them in that
-order. Both are idempotent and safe to re-run.
+**SQL editor (fallback):** paste `migrations/0001_init.sql`, then
+`migrations/0002_storage.sql`, then `migrations/0003_shipping.sql` into the
+project SQL editor and run them in that order. All three are idempotent and
+safe to re-run.
 
 ## What the schema gives you
 
@@ -29,6 +30,10 @@ order. Both are idempotent and safe to re-run.
 | `website_inquiries` | General contact-page inquiries |
 | `app_users` | Internal and future client users, with the Phase 1+ role enum |
 | `opportunity_notes`, `opportunity_status_history` | Internal notes and an audit trail of status changes |
+| `shipments` | Every shipping label bought, with the address it was printed with frozen at purchase (`0003`) |
+
+`v_client_directory` unions contacts and companies into one searchable list so
+the admin can find a person or a firm in a single query (`0003`).
 
 `v_opportunity_search` joins all of it into one row per opportunity with a
 `search_text` column covering client name, company, email, phone, project
@@ -48,8 +53,8 @@ RLS is enabled on every table and denies by default.
 
 ## Verifying the migration landed
 
-Run this after `0001` and `0002`. It should report 13 tables, 27 services,
-10 referral sources, and RLS enabled everywhere.
+Run this after `0001`, `0002` and `0003`. It should report 14 tables, 27
+services, 10 referral sources, and RLS enabled everywhere.
 
 ```sql
 select
@@ -58,7 +63,7 @@ select
        and tablename in ('app_users','companies','contacts','properties','services',
                          'referral_sources','opportunities','opportunity_services',
                          'referrals','files','website_inquiries','opportunity_notes',
-                         'opportunity_status_history'))            as tables_created,
+                         'opportunity_status_history','shipments'))  as tables_created,
   (select count(*) from services)                                  as services_seeded,
   (select count(*) from referral_sources)                          as referral_sources_seeded,
   (select count(*) from pg_tables
@@ -67,7 +72,7 @@ select
      and public = false)                                           as private_bucket;
 ```
 
-Expected: `13 | 27 | 10 | 0 | 1`.
+Expected: `14 | 27 | 10 | 0 | 1`.
 
 `tables_without_rls` must be **0**. Anything else means a table is publicly
 readable and the migration should be re-run before going further.

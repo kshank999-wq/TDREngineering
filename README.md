@@ -154,4 +154,5 @@ publication (spec §4).
 | `docs/ARCHITECTURE.md` | Spec §11, §18–20 — data model and future-module notes |
 | `docs/CONTENT-REQUIRED.md` | What TDR must supply, with paste-back templates |
 | `docs/DEFINITION-OF-DONE.md` | Spec §22 — the launch checklist with current status |
+| `docs/SHIPPING.md` | Printing shipping labels from a client record (Shippo) |
 | `supabase/README.md` | Applying migrations, RLS model, creating admin users |

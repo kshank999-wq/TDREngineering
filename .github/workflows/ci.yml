@@ -61,6 +61,13 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Contract tests for the Shippo client, against a stubbed fetch — no
+      # network, no money. These fail the build: a shipping failure that throws
+      # instead of returning a message turns a carrier outage into a 500 on the
+      # client record.
+      - name: Shipping contract checks
+        run: npm run check:shipping
+
       # Report-only on purpose. These are content gaps waiting on TDR, not code
       # defects, so failing the build on them would leave main permanently red
       # and train everyone to ignore it. The list prints on every run, and the
