@@ -39,6 +39,18 @@ export const env = {
   s3AccessKeyId: process.env.S3_ACCESS_KEY_ID || "",
   s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
 
+  // --- Connected Google Drive ------------------------------------------
+  // From a Google Cloud project TDR owns. See docs/GOOGLE-DRIVE.md.
+  googleClientId: process.env.GOOGLE_CLIENT_ID || "",
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+  /**
+   * Encrypts the Drive refresh token at rest. That token does not expire and
+   * grants continuing access to TDR's Drive, so it is the one secret obtained
+   * at runtime rather than set here — and it is stored encrypted under this
+   * key. Losing the key does not lose any files; it means reconnecting.
+   */
+  storageTokenKey: process.env.STORAGE_TOKEN_KEY || "",
+
   turnstileSiteKey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "",
   turnstileSecretKey: process.env.TURNSTILE_SECRET_KEY || "",
 

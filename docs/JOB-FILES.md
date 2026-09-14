@@ -57,23 +57,24 @@ recoverable — ask and it can be restored.
 
 ## Where the bytes live
 
-Today: **Supabase Storage**, private `job-files` bucket, staff-only by RLS.
+Three options, and the site uses whichever is highest on this list that is
+actually set up. **Internal → Settings → File storage** shows which one is in
+use right now.
 
-That is the right place to start — it already exists, it is already backed up
-with the database, and it needed no new account. It is **not** where this
-should end up at volume. Supabase charges for egress, and a surveying firm
-ships large files repeatedly; a client re-downloading a 5 GB scan several times
-is exactly the usage that produces a surprise bill.
+| | Set up by | When it is the right answer |
+| --- | --- | --- |
+| **Google Drive** | Connecting a Google account — `docs/GOOGLE-DRIVE.md` | Staff want files in the Drive they already use. Client downloads stream through the site, so this suits drawings and reports rather than raw point clouds |
+| **Cloud object storage** (Cloudflare R2) | Four environment variables — `docs/CLOUD-STORAGE.md` | Large deliverables at volume. Zero egress fees, ~$0.015/GB/month, downloads go straight from storage to the client |
+| **Supabase Storage** | Nothing — it is already there | The default, and fine for proposal PDFs. Supabase charges for egress, so a client re-downloading a 5 GB scan several times is exactly the usage that produces a surprise bill |
 
-**Cloudflare R2 is the likely destination**: zero egress fees, about
-$0.015/GB/month to store. A terabyte of job archives is roughly $15/month and a
-client downloading it ten times costs nothing extra. Backblaze B2 is the
-cheaper runner-up.
+**Changing this is not a cutover.** `files.storage_provider` is recorded **per
+row** (a deliberate choice in `0001`, spec §19; extended through the portal and
+job views in `0013`), so every file keeps resolving from wherever its own bytes
+were put. Connecting Drive today does not move, break or re-point a single
+existing file — it changes where the *next* upload goes.
 
-The migration is designed to be gradual, not a cutover. `files.storage_provider`
-is recorded **per row** (a deliberate choice in `0001`, spec §19), so files can
-move one at a time while old ones keep resolving from Supabase. All the storage
-logic sits behind `src/lib/storage/job-files.ts`.
+All of it sits behind `src/lib/storage/providers.ts`, which picks the driver
+per file rather than per deployment.
 
 ### And the NAS
 

@@ -37,6 +37,13 @@ export async function getPortalDownloadUrl(
 
   if (!file) return { ok: false, error: "That file is not available." };
 
+  // Drive has no signed link, so the client is pointed at a route that streams
+  // the bytes through the server. That route repeats this same authorization
+  // check — it does not trust having been linked to.
+  if (file.storage_provider === "google_drive") {
+    return { ok: true, url: `/portal/files/${fileId}` };
+  }
+
   // Only now — after the database has released the row — is storage reached,
   // and via the provider recorded on the file itself. A deliverable uploaded
   // before the move to cloud storage and one uploaded after both download.

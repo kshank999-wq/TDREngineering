@@ -46,6 +46,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Link href="/admin/prospects" className="text-ink-600 hover:text-ink-900">
                 Prospects
               </Link>
+              <Link
+                href="/admin/settings/storage"
+                className="text-ink-600 hover:text-ink-900"
+              >
+                Settings
+              </Link>
             </nav>
           </div>
           <Link href="/" className="shrink-0 text-sm text-ink-500 hover:text-ink-800">

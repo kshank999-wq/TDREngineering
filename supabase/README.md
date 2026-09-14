@@ -16,7 +16,8 @@ the project SQL editor and run them in filename order: `0001_init.sql`,
 `0002_storage.sql`, `0003_shipping.sql`, `0004_merge.sql`, `0005_harden.sql`,
 `0006_jobs.sql`, `0007_job_files.sql`, `0008_billing.sql`, `0009_portal.sql`,
 `0010_proposals.sql`, `0011_marketing.sql`, `0012_prospects.sql`,
-`0013_storage_provider.sql`. All are idempotent and safe to re-run.
+`0013_storage_provider.sql`, `0014_google_drive.sql`. All are idempotent and
+safe to re-run.
 
 ## What the schema gives you
 
@@ -42,6 +43,7 @@ the project SQL editor and run them in filename order: `0001_init.sql`,
 | `proposal_signatures`, `proposal_events` | The signature and its audit trail. Read-only to everyone signed in, owners included (`0010`) |
 | `email_suppressions` | The global do-not-email list, keyed on address. Outranks every list; `unsubscribed` and `complained` rows cannot be deleted by anyone (`0012`) |
 | `marketing_lists`, `marketing_list_members`, `marketing_imports` | Prospect lists as MEMBERSHIP over `contacts` — no second address book — plus a record of every spreadsheet loaded (`0012`) |
+| `storage_connections` | The connected Google Drive: which account, which folder, and the refresh token **encrypted** under `STORAGE_TOKEN_KEY`. Admin-only, and the view staff read omits the token column entirely rather than trusting anyone to avoid selecting it (`0014`) |
 | `marketing_assets`, `marketing_asset_versions` | Flyers and brochures. An asset HAS versions, one of them current, so a share link keeps serving the right file when the flyer is redesigned (`0011`) |
 
 Duplicate client records are merged by `merge_contacts()` / `merge_companies()`
@@ -132,6 +134,21 @@ columns and every one of which filters through the single predicate
 `client_can_see_job()` (`0009`). Those views bypass RLS, so they are revoked
 from `anon`: an anonymous grant there would be a public read of every job.
 See `docs/CLIENT-PORTAL.md`.
+
+### The Drive token is filtered by column, not by policy
+
+Same problem, opposite direction. `storage_connections` holds the encrypted
+Google refresh token, and an owner legitimately needs to read that row — to see
+which account is connected, when, and whether it is working. RLS would hand
+them the whole row, token included, and from there the REST API exposes it to
+anything holding an owner's session.
+
+So staff read `v_storage_connections` (`0014`), which simply does not select
+`refresh_token_enc`; in its place is `has_token`, a boolean. The column is
+reachable only by `service_role`, from server code that needs to decrypt it in
+order to call Google. The table's own policies are admin-only on top of that —
+the view is the column filter, the policies are the row filter, and neither
+does the other's job.
 
 ## Verifying the migration landed
 

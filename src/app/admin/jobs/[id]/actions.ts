@@ -16,6 +16,7 @@ import {
   signedUploadTarget,
   signedDownloadUrl,
   objectExists,
+  driveWebLink,
 } from "@/lib/storage/providers";
 
 /**
@@ -119,7 +120,7 @@ export type UploadTicket =
   | {
       ok: true;
       /** Which storage the browser should send to, and therefore how. */
-      provider: "supabase" | "s3";
+      provider: "supabase" | "s3" | "google_drive";
       bucket: string;
       path: string;
       uploadUrl: string;
@@ -169,6 +170,8 @@ export async function requestUpload(input: {
     path,
     expiresIn: UPLOAD_TTL_SECONDS,
     contentType: input.contentType ?? null,
+    filename: input.filename,
+    byteSize: input.size,
   });
 
   if (!target.ok) return { ok: false, error: target.error };
@@ -213,7 +216,12 @@ export async function recordUpload(input: {
   const supabase = await supabaseServer();
 
   // Confirm the bytes are really there before claiming the file exists.
-  const provider = input.provider === "s3" ? "s3" : "supabase";
+  const provider =
+    input.provider === "s3"
+      ? "s3"
+      : input.provider === "google_drive"
+        ? "google_drive"
+        : "supabase";
   const bucket = input.bucket || JOB_FILES_BUCKET;
 
   if (!(await objectExists({ provider, bucket, path: input.path }))) {
@@ -266,8 +274,22 @@ export async function getDownloadUrl(
 
   if (!file) return { ok: false, error: "File not found." };
 
-  // The provider comes from the file's own row, so a file uploaded to Supabase
-  // last month and one uploaded to cloud storage today both work.
+  // Drive has no signed link, but staff already have access to the Drive —
+  // so they get Drive's own web view. Faster than any proxy and no size limit,
+  // which matters when the file is a point cloud.
+  if (file.storage_provider === "google_drive") {
+    const link = await driveWebLink({
+      provider: "google_drive",
+      path: file.storage_path as string,
+    });
+    if (!link) {
+      return { ok: false, error: "That file could not be opened in Google Drive." };
+    }
+    return { ok: true, url: link };
+  }
+
+  // Otherwise the provider comes from the file's own row, so a file uploaded
+  // to Supabase last month and one uploaded to cloud storage today both work.
   return signedDownloadUrl({
     provider: file.storage_provider as string,
     bucket: file.storage_bucket as string,

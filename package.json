@@ -17,6 +17,7 @@
     "check:slugs": "tsx scripts/check-slugs.ts",
     "check:import": "tsx scripts/check-import.ts",
     "check:storage": "tsx --conditions=react-server scripts/check-storage.ts",
+    "check:drive": "tsx --conditions=react-server scripts/check-drive.ts",
     "archive:crawl": "tsx scripts/archive-site.ts"
   },
   "dependencies": {

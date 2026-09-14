@@ -102,6 +102,15 @@ jobs:
       - name: Object storage checks
         run: npm run check:storage
 
+      # The Google Drive refresh token does not expire and grants continuing
+      # access to TDR's Drive, so it is encrypted before it is stored. These
+      # checks hold the encryption to its properties — a fresh IV every time
+      # above all — and exercise the Drive client's failure paths against a
+      # stubbed fetch, because the paths that matter are the ones that only
+      # run when Google says no.
+      - name: Google Drive checks
+        run: npm run check:drive
+
       # CSV exports end up open in somebody's spreadsheet. A cell beginning
       # `=` is executed there, and client names reach these files from a public
       # form, so the escaping is a security control rather than formatting.

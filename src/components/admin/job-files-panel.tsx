@@ -63,6 +63,7 @@ export function JobFilesPanel({ jobId, files }: { jobId: string; files: JobFile[
     for (const file of chosen) {
       setProgress({ name: file.name, pct: 0 });
 
+      let driveFileId = "";
       const ticket = await requestUpload({
         jobId,
         filename: file.name,
@@ -80,7 +81,30 @@ export function JobFilesPanel({ jobId, files }: { jobId: string; files: JobFile[
       // Two providers, two shapes. Cloud storage takes a plain PUT to the
       // presigned URL; Supabase needs its own token. Either way the bytes go
       // straight from the browser to storage and never through the server.
-      if (ticket.provider === "s3") {
+      if (ticket.provider === "google_drive") {
+        // Drive assigns the id, so it only exists after the bytes land. The
+        // resumable session URL needs no auth header — that is what lets the
+        // browser send straight to Google.
+        const response = await fetch(ticket.uploadUrl, {
+          method: "PUT",
+          body: file,
+          headers: ticket.headers,
+        });
+        if (!response.ok) {
+          setError(`${file.name} did not upload (${response.status}). Try again.`);
+          setProgress(null);
+          return;
+        }
+        try {
+          const created = (await response.json()) as { id?: string };
+          if (!created.id) throw new Error("no id");
+          driveFileId = created.id;
+        } catch {
+          setError(`${file.name} uploaded but Google did not confirm it. Check Drive.`);
+          setProgress(null);
+          return;
+        }
+      } else if (ticket.provider === "s3") {
         const response = await fetch(ticket.uploadUrl, {
           method: "PUT",
           body: file,
@@ -111,7 +135,8 @@ export function JobFilesPanel({ jobId, files }: { jobId: string; files: JobFile[
         jobId,
         provider: ticket.provider,
         bucket: ticket.bucket,
-        path: ticket.path,
+        // For Drive the path is the file id Google just assigned.
+        path: ticket.provider === "google_drive" ? driveFileId : ticket.path,
         filename: file.name,
         contentType: file.type || "application/octet-stream",
         size: file.size,

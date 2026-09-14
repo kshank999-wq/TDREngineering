@@ -55,6 +55,7 @@ failing with a 500 when it is unconfigured.
 | `npm run check:slugs` | Verify marketing share-link slugs match the database constraint |
 | `npm run check:import` | Verify prospect CSV import parses real-world spreadsheets |
 | `npm run check:storage` | Verify presigned storage URLs match AWS's own signer |
+| `npm run check:drive` | Verify Google Drive token encryption and client error paths |
 | `npm run archive:crawl` | Phase 1A legacy site archive (see below) |
 
 CI (`.github/workflows/ci.yml`) runs lint, typecheck and build on every pull
@@ -164,6 +165,7 @@ publication (spec §4).
 | `docs/JOBS.md` | Jobs — the spine that files, invoices and the portal attach to |
 | `docs/JOB-FILES.md` | Uploading, sharing and storing job files |
 | `docs/CLOUD-STORAGE.md` | Setting up Cloudflare R2 for job files, and why |
+| `docs/GOOGLE-DRIVE.md` | Connecting TDR's own Google Drive instead, and where it stops |
 | `docs/BILLING.md` | Invoices, payments and what is outstanding |
 | `docs/CLIENT-PORTAL.md` | Giving a client a login, and why they get no table access |
 | `docs/E-SIGNATURE.md` | Writing a proposal, sending it, and getting it signed |
