@@ -6,16 +6,13 @@ import { jobStatuses, jobStatusLabel, jobStatusTone } from "@/content/job-status
 import { statusClasses } from "@/content/statuses";
 import { updateJobStatus, saveJobDetails, addJobNote } from "./actions";
 import { JobFilesPanel, type JobFile } from "@/components/admin/job-files-panel";
+import { invoiceStateLabel, invoiceStateTone, money } from "@/content/billing";
+import { createInvoiceForJob } from "@/app/admin/invoices/[id]/actions";
 
 export const metadata: Metadata = { title: "Job" };
 export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ id: string }> };
-
-const money = (value: unknown) =>
-  value == null
-    ? "—"
-    : Number(value).toLocaleString(undefined, { style: "currency", currency: "USD" });
 
 const day = (value: unknown) =>
   value ? new Date(`${String(value)}T00:00:00`).toLocaleDateString() : null;
@@ -48,7 +45,14 @@ export default async function JobDetailPage({ params }: Params) {
 
   if (!job) notFound();
 
-  const [{ data: notes }, { data: history }, { data: team }, filesResult] = await Promise.all([
+  const [
+    { data: notes },
+    { data: history },
+    { data: team },
+    filesResult,
+    invoicesResult,
+    billingResult,
+  ] = await Promise.all([
     supabase
       .from("job_notes")
       .select("id, body, created_at, author:app_users ( full_name, email )")
@@ -73,7 +77,17 @@ export default async function JobDetailPage({ params }: Params) {
       )
       .eq("job_id", id)
       .order("uploaded_at", { ascending: false }),
+    supabase
+      .from("v_invoice_ledger")
+      .select("id, invoice_number, state, total, amount_paid, balance, due_date, days_past_due")
+      .eq("job_id", id)
+      .order("issue_date", { ascending: false }),
+    supabase.from("v_job_billing").select("*").eq("job_id", id).maybeSingle(),
   ]);
+
+  const invoices = (invoicesResult.data ?? []) as Record<string, unknown>[];
+  const billing = (billingResult.data ?? null) as Record<string, unknown> | null;
+  const billingUnavailable = Boolean(invoicesResult.error);
 
   const files = (filesResult.data ?? []) as JobFile[];
   // 0007 adds the files view. Until it is applied the query fails, and saying
@@ -323,14 +337,98 @@ export default async function JobDetailPage({ params }: Params) {
             </div>
           </section>
 
-          <section className="rounded-xl border border-dashed border-ink-300 bg-ink-50 p-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-500">
-              Invoicing
-            </h2>
-            <p className="mt-2 max-w-prose text-sm text-ink-600">
-              Billing attaches to this record and is not built yet. The job number above is what
-              it will hang off.
-            </p>
+          <section className="rounded-xl border border-ink-200 bg-white p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-500">
+                Billing
+              </h2>
+              {!billingUnavailable ? (
+                <form action={createInvoiceForJob}>
+                  <input type="hidden" name="job_id" value={job.id as string} />
+                  <button
+                    type="submit"
+                    className="rounded-md border border-ink-200 bg-white px-4 py-2 text-sm font-semibold text-ink-800 hover:bg-ink-50"
+                  >
+                    New invoice
+                  </button>
+                </form>
+              ) : null}
+            </div>
+
+            {billingUnavailable ? (
+              <p className="mt-4 text-sm text-amber-800">
+                Billing is unavailable — apply{" "}
+                <code className="rounded bg-ink-100 px-1 py-0.5 text-xs">
+                  supabase/migrations/0008_billing.sql
+                </code>
+                .
+              </p>
+            ) : (
+              <>
+                <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+                  {([
+                    ["Contracted", job.contract_amount],
+                    ["Invoiced", billing?.invoiced],
+                    ["Received", billing?.paid],
+                    ["Outstanding", billing?.outstanding],
+                  ] as const).map(([label, value], i) => (
+                    <div key={label}>
+                      <dt className="text-xs font-semibold uppercase tracking-wider text-ink-400">
+                        {label}
+                      </dt>
+                      <dd
+                        className={`mt-0.5 font-mono tabular-nums ${
+                          i === 3 && Number(value ?? 0) > 0
+                            ? "font-semibold text-ink-900"
+                            : "text-ink-700"
+                        }`}
+                      >
+                        {money(value ?? 0)}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+
+                {invoices.length > 0 ? (
+                  <ul className="mt-5 divide-y divide-ink-100 border-t border-ink-100">
+                    {invoices.map((row) => (
+                      <li
+                        key={row.id as string}
+                        className="flex items-center justify-between gap-4 py-3"
+                      >
+                        <div>
+                          <Link
+                            href={`/admin/invoices/${row.id}`}
+                            className="font-mono text-xs font-semibold text-brand-600 hover:text-brand-500"
+                          >
+                            {row.invoice_number as string}
+                          </Link>
+                          <p className="text-xs text-ink-500">
+                            {row.due_date
+                              ? `Due ${new Date(`${row.due_date}T00:00:00`).toLocaleDateString()}`
+                              : "No due date"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                              statusClasses[invoiceStateTone(row.state as string)]
+                            }`}
+                          >
+                            {invoiceStateLabel(row.state as string)}
+                          </span>
+                          <span className="font-mono text-sm tabular-nums text-ink-900">
+                            {money(row.total)}
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-4 text-sm text-ink-500">Nothing billed on this job yet.</p>
+                )}
+              </>
+            )}
           </section>
         </div>
 
