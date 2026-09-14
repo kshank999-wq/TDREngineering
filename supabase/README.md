@@ -14,7 +14,7 @@ supabase db push
 **SQL editor (fallback):** paste each file's *contents* — not its path — into
 the project SQL editor and run them in filename order: `0001_init.sql`,
 `0002_storage.sql`, `0003_shipping.sql`, `0004_merge.sql`, `0005_harden.sql`,
-`0006_jobs.sql`. All are idempotent and safe to re-run.
+`0006_jobs.sql`, `0007_job_files.sql`. All are idempotent and safe to re-run.
 
 ## What the schema gives you
 
@@ -26,7 +26,7 @@ the project SQL editor and run them in filename order: `0001_init.sql`,
 | `opportunities` | Proposal requests / potential projects — the source of truth for an inbound request |
 | `referrals` | The relationship between a referral source and an opportunity |
 | `services` / `opportunity_services` | Service catalog and the services requested on each opportunity |
-| `files` | Metadata for submitted documents (bytes live in Storage) |
+| `files` | Metadata for documents — proposal attachments and job files. Bytes live in Storage; `storage_provider` is per row so they can move (`0001`, `0007`) |
 | `website_inquiries` | General contact-page inquiries |
 | `app_users` | Internal and future client users, with the Phase 1+ role enum |
 | `opportunity_notes`, `opportunity_status_history` | Internal notes and an audit trail of status changes |

@@ -5,6 +5,7 @@ import { supabaseServer, getStaffUser } from "@/lib/supabase/server";
 import { jobStatuses, jobStatusLabel, jobStatusTone } from "@/content/job-statuses";
 import { statusClasses } from "@/content/statuses";
 import { updateJobStatus, saveJobDetails, addJobNote } from "./actions";
+import { JobFilesPanel, type JobFile } from "@/components/admin/job-files-panel";
 
 export const metadata: Metadata = { title: "Job" };
 export const dynamic = "force-dynamic";
@@ -47,7 +48,7 @@ export default async function JobDetailPage({ params }: Params) {
 
   if (!job) notFound();
 
-  const [{ data: notes }, { data: history }, { data: team }] = await Promise.all([
+  const [{ data: notes }, { data: history }, { data: team }, filesResult] = await Promise.all([
     supabase
       .from("job_notes")
       .select("id, body, created_at, author:app_users ( full_name, email )")
@@ -65,7 +66,20 @@ export default async function JobDetailPage({ params }: Params) {
       .neq("role", "client")
       .is("archived_at", null)
       .order("full_name"),
+    supabase
+      .from("v_job_files")
+      .select(
+        "id, label, original_filename, content_type, byte_size, category, client_visible, uploaded_at, uploaded_by_name",
+      )
+      .eq("job_id", id)
+      .order("uploaded_at", { ascending: false }),
   ]);
+
+  const files = (filesResult.data ?? []) as JobFile[];
+  // 0007 adds the files view. Until it is applied the query fails, and saying
+  // so beats an empty panel that looks like there are no files.
+  const filesUnavailable = Boolean(filesResult.error);
+  const sharedCount = files.filter((f) => f.client_visible).length;
 
   const contact = one(job.contact);
   const company = one(job.company);
@@ -283,13 +297,39 @@ export default async function JobDetailPage({ params }: Params) {
             </form>
           </section>
 
+          <section className="rounded-xl border border-ink-200 bg-white p-6">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-500">
+                Files ({files.length})
+              </h2>
+              {sharedCount > 0 ? (
+                <span className="text-xs text-ink-500">
+                  {sharedCount} shared with the client
+                </span>
+              ) : null}
+            </div>
+            <div className="mt-4">
+              {filesUnavailable ? (
+                <p className="text-sm text-amber-800">
+                  File storage is unavailable — apply{" "}
+                  <code className="rounded bg-ink-100 px-1 py-0.5 text-xs">
+                    supabase/migrations/0007_job_files.sql
+                  </code>
+                  .
+                </p>
+              ) : (
+                <JobFilesPanel jobId={job.id as string} files={files} />
+              )}
+            </div>
+          </section>
+
           <section className="rounded-xl border border-dashed border-ink-300 bg-ink-50 p-6">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-500">
-              Deliverables and invoicing
+              Invoicing
             </h2>
             <p className="mt-2 max-w-prose text-sm text-ink-600">
-              Job files and billing attach to this record and are not built yet. The job number
-              above is what they will hang off.
+              Billing attaches to this record and is not built yet. The job number above is what
+              it will hang off.
             </p>
           </section>
         </div>

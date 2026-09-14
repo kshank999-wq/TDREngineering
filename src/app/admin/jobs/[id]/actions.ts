@@ -3,6 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { supabaseServer, getStaffUser } from "@/lib/supabase/server";
 import { jobStatuses } from "@/content/job-statuses";
+import { fileCategories } from "@/content/file-categories";
+import {
+  JOB_FILES_BUCKET,
+  MAX_JOB_FILE_BYTES,
+  DOWNLOAD_TTL_SECONDS,
+  jobFilePath,
+  formatBytes,
+} from "@/lib/storage/job-files";
 
 /**
  * Server actions for a job.
@@ -97,4 +105,186 @@ export async function addJobNote(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath(`/admin/jobs/${id}`);
+}
+
+// ------------------------------------------------------------- files ------
+
+export type UploadTicket =
+  | { ok: true; path: string; token: string; bucket: string }
+  | { ok: false; error: string };
+
+/**
+ * Issues a short-lived signed upload URL. The browser PUTs the file straight
+ * to storage with it — the bytes never come through here, which is the only
+ * way files larger than Vercel's 4.5 MB request-body cap can move at all.
+ *
+ * Nothing is recorded yet. `recordUpload` writes the metadata row once the
+ * bytes have actually landed.
+ */
+export async function requestUpload(input: {
+  jobId: string;
+  filename: string;
+  size: number;
+}): Promise<UploadTicket> {
+  const staff = await getStaffUser();
+  if (!staff) return { ok: false, error: "Not authorized. Sign in again." };
+  if (!input.jobId || !input.filename) return { ok: false, error: "Missing job or filename." };
+
+  if (!Number.isFinite(input.size) || input.size <= 0) {
+    return { ok: false, error: "That file appears to be empty." };
+  }
+  if (input.size > MAX_JOB_FILE_BYTES) {
+    return {
+      ok: false,
+      error: `That file is ${formatBytes(input.size)}. The limit is ${formatBytes(
+        MAX_JOB_FILE_BYTES,
+      )} per file — split it or put it on the NAS and link it instead.`,
+    };
+  }
+
+  const path = jobFilePath(input.jobId, input.filename);
+  const supabase = await supabaseServer();
+  const { data, error } = await supabase.storage
+    .from(JOB_FILES_BUCKET)
+    .createSignedUploadUrl(path);
+
+  if (error || !data) {
+    return { ok: false, error: error?.message ?? "Could not start the upload." };
+  }
+  return { ok: true, path: data.path, token: data.token, bucket: JOB_FILES_BUCKET };
+}
+
+/**
+ * Records a file after its bytes have landed.
+ *
+ * Verifies the object actually exists first. Without that check this action
+ * would happily record a file nobody can download, and the failure would only
+ * surface later when a client clicked the link.
+ */
+export async function recordUpload(input: {
+  jobId: string;
+  path: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  category: string;
+  clientVisible: boolean;
+  label: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const staff = await getStaffUser();
+  if (!staff) return { ok: false, error: "Not authorized. Sign in again." };
+
+  if (!fileCategories.some((c) => c.value === input.category)) {
+    return { ok: false, error: "Unknown file category." };
+  }
+
+  const supabase = await supabaseServer();
+
+  // Confirm the bytes are really there before claiming the file exists.
+  const folder = input.path.split("/").slice(0, -1).join("/");
+  const name = input.path.split("/").pop() ?? "";
+  const { data: listed } = await supabase.storage
+    .from(JOB_FILES_BUCKET)
+    .list(folder, { search: name });
+
+  if (!listed?.some((entry) => entry.name === name)) {
+    return {
+      ok: false,
+      error: "The upload did not finish — nothing was saved. Try again.",
+    };
+  }
+
+  const { error } = await supabase.from("files").insert({
+    job_id: input.jobId,
+    storage_provider: "supabase",
+    storage_bucket: JOB_FILES_BUCKET,
+    storage_path: input.path,
+    original_filename: input.filename.slice(0, 200),
+    content_type: input.contentType || null,
+    byte_size: input.size,
+    category: input.category,
+    client_visible: input.clientVisible,
+    label: input.label.trim().slice(0, 200) || null,
+    uploaded_by: staff.id,
+  });
+
+  if (error) {
+    return {
+      ok: false,
+      error: `The file uploaded but could not be recorded: ${error.message}`,
+    };
+  }
+
+  revalidatePath(`/admin/jobs/${input.jobId}`);
+  return { ok: true };
+}
+
+/** A short-lived link to download one file. */
+export async function getDownloadUrl(
+  fileId: string,
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const staff = await getStaffUser();
+  if (!staff) return { ok: false, error: "Not authorized." };
+
+  const supabase = await supabaseServer();
+  const { data: file } = await supabase
+    .from("files")
+    .select("storage_bucket, storage_path, original_filename")
+    .eq("id", fileId)
+    .is("archived_at", null)
+    .maybeSingle();
+
+  if (!file) return { ok: false, error: "File not found." };
+
+  const { data, error } = await supabase.storage
+    .from(file.storage_bucket as string)
+    .createSignedUrl(file.storage_path as string, DOWNLOAD_TTL_SECONDS, {
+      download: file.original_filename as string,
+    });
+
+  if (error || !data) return { ok: false, error: error?.message ?? "Could not create a link." };
+  return { ok: true, url: data.signedUrl };
+}
+
+/** The portal gate. Flipping this is what exposes a file to a client. */
+export async function setFileVisibility(input: {
+  fileId: string;
+  jobId: string;
+  clientVisible: boolean;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const staff = await getStaffUser();
+  if (!staff) return { ok: false, error: "Not authorized." };
+
+  const supabase = await supabaseServer();
+  const { error } = await supabase
+    .from("files")
+    .update({ client_visible: input.clientVisible })
+    .eq("id", input.fileId);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/admin/jobs/${input.jobId}`);
+  return { ok: true };
+}
+
+/**
+ * Removes a file from the job. Archived, not deleted: the row and the bytes
+ * both stay, because "I deleted the wrong drawing" is a call TDR should be
+ * able to recover from.
+ */
+export async function archiveFile(input: {
+  fileId: string;
+  jobId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const staff = await getStaffUser();
+  if (!staff) return { ok: false, error: "Not authorized." };
+
+  const supabase = await supabaseServer();
+  const { error } = await supabase
+    .from("files")
+    .update({ archived_at: new Date().toISOString(), client_visible: false })
+    .eq("id", input.fileId);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/admin/jobs/${input.jobId}`);
+  return { ok: true };
 }
