@@ -13,8 +13,8 @@ supabase db push
 
 **SQL editor (fallback):** paste each file's *contents* — not its path — into
 the project SQL editor and run them in filename order: `0001_init.sql`,
-`0002_storage.sql`, `0003_shipping.sql`, `0004_merge.sql`. All are idempotent
-and safe to re-run.
+`0002_storage.sql`, `0003_shipping.sql`, `0004_merge.sql`, `0005_harden.sql`.
+All are idempotent and safe to re-run.
 
 ## What the schema gives you
 
@@ -50,6 +50,32 @@ project number (spec §11).
 ## Row Level Security
 
 RLS is enabled on every table and denies by default.
+
+### Function privileges
+
+Supabase grants `EXECUTE` on every new function in `public` to `anon` by
+default, which puts it on the REST API at `/rest/v1/rpc/<name>`. For a
+`SECURITY DEFINER` function — one that bypasses RLS on purpose — that is a
+public endpoint with elevated rights, so each one is locked down explicitly
+(`0004`, `0005`):
+
+* `is_staff()`, `is_admin()`, `current_app_role()`, `client_impact()`,
+  `merge_contacts()`, `merge_companies()` — revoked from `public` and `anon`,
+  granted to `authenticated` only.
+* `log_opportunity_status_change()` is a trigger function and needs no grant
+  at all; PostgreSQL checks `EXECUTE` when a trigger is created, not when it
+  fires.
+* Revoke from **`public` first**. Every role inherits it, so revoking from
+  `anon` alone changes nothing.
+* `authenticated` must keep `EXECUTE` on `is_staff()` — the staff policies
+  call it while the query runs, and the privilege is checked against the
+  calling role. Revoking it without re-granting takes the whole admin down.
+* Adding a `SECURITY DEFINER` function means doing both halves: the grants
+  *and* an `is_staff()` check inside the function, so neither alone is
+  load-bearing.
+
+Run `get_advisors` (or the Supabase dashboard's Security Advisor) after any
+migration that adds a function — it catches exactly this.
 
 * `anon` can read only `services` and `referral_sources`.
 * `authenticated` staff (an `app_users` row with `is_active` and a role other
