@@ -73,7 +73,16 @@ Record the real values in TDR's password manager, not in this repository.
 | 12 | Google Search Console | | | ☐ | n/a | ☐ |
 | 13 | Cloudflare Turnstile (bot protection) | | | ☐ | n/a | ☐ |
 | 14 | Cloud storage / backup destination | | | ☐ | ☐ | ☐ |
-| 15 | Password manager holding all of the above | | | ☐ | ☐ | ☐ |
+| 15 | Google Cloud project (OAuth client for the Drive connection) | | | ☐ | n/a | ☐ |
+| 16 | The Google account whose Drive holds job files | | | ☐ | ☐ | ☐ |
+| 17 | Password manager holding all of the above | | | ☐ | ☐ | ☐ |
+
+Rows 15 and 16 are separate on purpose, and both matter. The Cloud project
+holds the OAuth client — lose access to it and the Connect button stops working
+for everyone. The Google account is where the files themselves live — lose
+access to *that* and the files are gone with it. They may well be the same
+person's login today; they should each have a second administrator anyway.
+`docs/GOOGLE-DRIVE.md` sets both up.
 
 ---
 

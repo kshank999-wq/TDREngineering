@@ -48,6 +48,33 @@ Stood up and verified in production on 2–3 September 2026:
 * **The full path** — public form → validation → Supabase writes → storage
   upload → internal proposal view, exercised with real submissions.
 
+## Built, but never yet run against the live service
+
+Everything below is written, type-checked, covered by contract tests against
+stubs, and deployed — and has never once completed against the real provider,
+because doing so needs an account, a card, or a real client. Contract tests
+prove the code does what I think the service expects. They cannot prove the
+service agrees.
+
+So each of these should be exercised **once, deliberately, with something
+disposable** before it is relied on for a real job. That is the whole list; if
+a path is not on it, it has been run for real.
+
+| Path | The first real run | What it would reveal |
+| --- | --- | --- |
+| Shipping — Get rates | Quote a label to a real address | Shippo credentials and address validation. Quoting is free; **buying** spends money, so they are separate buttons |
+| Job file upload | Upload a small file to a test job | The signed upload URL and the storage account's CORS rules |
+| Portal invite | Invite yourself at a second address | Supabase `createUser` / `generateLink` and the invite email arriving |
+| Proposal signing | Send a proposal to your own address and sign it | The token link, the consent record, the acceptance writing back |
+| Marketing upload | Upload one flyer and open its share link | The public `/m/<slug>` page against a real stored file |
+| Prospect import | Import a five-row spreadsheet | Column matching against a real export from wherever the list lives |
+| Google Drive connect | Click Connect, then upload one file | The OAuth round trip, the folder, and the redirect URI matching character for character |
+
+Several of these also depend on the Resend key being fixed, since the email is
+half of what you are checking.
+
+---
+
 ## What blocks launch
 
 Still none of it code:
