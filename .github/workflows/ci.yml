@@ -74,6 +74,14 @@ jobs:
       - name: Shipping contract checks
         run: npm run check:shipping
 
+      # The primitives a signature's meaning rests on: the link token, and the
+      # hash that ties a signature to the exact document that was on screen.
+      # Neither fails loudly when broken — a bad token hash looks like a 404,
+      # and an unstable document hash flags honest proposals as tampered with
+      # until everyone learns to ignore the warning.
+      - name: E-signature contract checks
+        run: npm run check:esign
+
       # CSV exports end up open in somebody's spreadsheet. A cell beginning
       # `=` is executed there, and client names reach these files from a public
       # form, so the escaping is a security control rather than formatting.

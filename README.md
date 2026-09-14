@@ -51,6 +51,7 @@ failing with a 500 when it is unconfigured.
 | `npm run check:actions` | Verify every `"use server"` file exports only async functions |
 | `npm run check:csv` | Verify CSV exports are quoted and formula-safe |
 | `npm run check:shipping` | Contract tests for the Shippo client (stubbed, no network) |
+| `npm run check:esign` | Verify the signing token and document hash behave (no network) |
 | `npm run archive:crawl` | Phase 1A legacy site archive (see below) |
 
 CI (`.github/workflows/ci.yml`) runs lint, typecheck and build on every pull
@@ -161,6 +162,7 @@ publication (spec §4).
 | `docs/JOB-FILES.md` | Uploading, sharing and storing job files |
 | `docs/BILLING.md` | Invoices, payments and what is outstanding |
 | `docs/CLIENT-PORTAL.md` | Giving a client a login, and why they get no table access |
+| `docs/E-SIGNATURE.md` | Writing a proposal, sending it, and getting it signed |
 | `docs/SHIPPING.md` | Printing shipping labels from a client record (Shippo) |
 | `docs/MERGING-CLIENTS.md` | Finding and merging duplicate client records |
 | `supabase/README.md` | Applying migrations, RLS model, creating admin users |

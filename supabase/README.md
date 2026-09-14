@@ -14,8 +14,8 @@ supabase db push
 **SQL editor (fallback):** paste each file's *contents* — not its path — into
 the project SQL editor and run them in filename order: `0001_init.sql`,
 `0002_storage.sql`, `0003_shipping.sql`, `0004_merge.sql`, `0005_harden.sql`,
-`0006_jobs.sql`, `0007_job_files.sql`, `0008_billing.sql`, `0009_portal.sql`.
-All are idempotent and safe to re-run.
+`0006_jobs.sql`, `0007_job_files.sql`, `0008_billing.sql`, `0009_portal.sql`,
+`0010_proposals.sql`. All are idempotent and safe to re-run.
 
 ## What the schema gives you
 
@@ -36,6 +36,9 @@ All are idempotent and safe to re-run.
 | `job_notes`, `job_status_history` | Internal notes and an audit trail of job status changes (`0006`) |
 | `invoices`, `invoice_lines`, `payments` | Billing. Totals derive from the lines by trigger; "paid" derives from the payments (`0008`) |
 | `client_portal_access` | Which client login may see which contact's jobs, and whether that extends to the whole firm (`0009`) |
+| `proposals`, `proposal_lines` | What TDR offered — scope, exclusions, fee, terms. Frozen by trigger once sent (`0010`) |
+| `proposal_access_tokens` | Signing links. Only the SHA-256 of each token is stored; the raw token lives in the link and nowhere else (`0010`) |
+| `proposal_signatures`, `proposal_events` | The signature and its audit trail. Read-only to everyone signed in, owners included (`0010`) |
 
 Duplicate client records are merged by `merge_contacts()` / `merge_companies()`
 (`0004`) — one atomic function each, staff-gated in the database. The losing
@@ -68,9 +71,19 @@ public endpoint with elevated rights, so each one is locked down explicitly
   `merge_contacts()`, `merge_companies()`, `client_can_see_job()`,
   `current_client_contact()` — revoked from `public` and `anon`, granted to
   `authenticated` only.
-* `log_opportunity_status_change()` is a trigger function and needs no grant
-  at all; PostgreSQL checks `EXECUTE` when a trigger is created, not when it
-  fires.
+* `proposal_for_signing()`, `proposal_document_for_signing()`,
+  `record_proposal_view()`, `accept_proposal()`, `decline_proposal()` —
+  revoked from everybody and granted back to **`service_role` alone** (`0010`).
+  The public signing page is anonymous, so a server route holding the service
+  role calls these after hashing the token itself; not even signed-in staff may
+  call them. **The re-grant is not optional**: revoking from `public` takes the
+  privilege away from `service_role` too, because it inherits like every other
+  role, and `BYPASSRLS` skips row policies rather than `EXECUTE`.
+* `log_opportunity_status_change()` and `recalculate_proposal_totals()` are
+  trigger functions and need no grant at all; PostgreSQL checks `EXECUTE` when
+  a trigger is created, not when it fires. Both are revoked anyway so they stay
+  off the REST API — verified as the `authenticated` role, with the privilege
+  revoked, that the trigger still fires.
 * Revoke from **`public` first**. Every role inherits it, so revoking from
   `anon` alone changes nothing.
 * `authenticated` must keep `EXECUTE` on `is_staff()` — the staff policies

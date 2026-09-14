@@ -25,6 +25,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Link href="/admin/proposals" className="text-ink-600 hover:text-ink-900">
                 Proposal requests
               </Link>
+              <Link
+                href="/admin/proposals/documents"
+                className="text-ink-600 hover:text-ink-900"
+              >
+                Proposals
+              </Link>
               <Link href="/admin/jobs" className="text-ink-600 hover:text-ink-900">
                 Jobs
               </Link>

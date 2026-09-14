@@ -6,7 +6,9 @@ import { opportunityStatuses, statusLabel, statusTone, statusClasses } from "@/c
 import { referralSourceByCode } from "@/content/referrals";
 import { questionLabel } from "@/content/services";
 import { formatBytes } from "@/lib/uploads";
+import { proposalStateLabel } from "@/content/esign";
 import { updateStatus, addNote, convertToJob } from "./actions";
+import { createProposalFromOpportunity } from "../documents/[id]/actions";
 
 export const metadata: Metadata = { title: "Proposal request" };
 export const dynamic = "force-dynamic";
@@ -50,6 +52,16 @@ export default async function ProposalDetailPage({ params }: Params) {
     .eq("opportunity_id", id)
     .is("archived_at", null)
     .maybeSingle();
+
+  // Every proposal TDR has offered against this request. More than one is
+  // normal: a revised fee is a new proposal, because the old one is the record
+  // of what was offered at the time.
+  const { data: proposalDocuments } = await supabase
+    .from("v_proposal_board")
+    .select("id, proposal_number, state, total, signed_by, created_at")
+    .eq("opportunity_id", id)
+    .order("created_at", { ascending: false });
+  const proposalDocs = proposalDocuments ?? [];
 
   const [{ data: services }, { data: referral }, { data: files }, { data: notes }, { data: history }] =
     await Promise.all([
@@ -186,6 +198,47 @@ export default async function ProposalDetailPage({ params }: Params) {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_22rem]">
         <div className="space-y-6">
+          {/* TDR's own proposal document, which is what a client actually
+              signs. Separate from this page, which records what they asked
+              for — see docs/E-SIGNATURE.md. */}
+          <Panel title={`Proposals sent (${proposalDocs.length})`}>
+            {proposalDocs.length === 0 ? (
+              <p className="text-sm text-ink-500">
+                Nothing offered yet. Creating one starts a draft seeded from this request.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {proposalDocs.map((doc) => (
+                  <li key={doc.id as string} className="flex flex-wrap items-baseline gap-x-3">
+                    <Link
+                      href={`/admin/proposals/documents/${doc.id}`}
+                      className="text-sm font-medium text-ink-900 underline"
+                    >
+                      {doc.proposal_number as string}
+                    </Link>
+                    <span className="text-sm text-ink-600">
+                      {proposalStateLabel(doc.state as string)}
+                    </span>
+                    {doc.signed_by ? (
+                      <span className="text-xs text-ink-500">
+                        signed by {doc.signed_by as string}
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <form action={createProposalFromOpportunity} className="mt-4">
+              <input type="hidden" name="opportunityId" value={opportunity.id as string} />
+              <button
+                type="submit"
+                className="rounded-md border border-ink-300 bg-white px-4 py-2 text-sm font-semibold text-ink-800 hover:bg-ink-50"
+              >
+                {proposalDocs.length === 0 ? "Write a proposal" : "Write another proposal"}
+              </button>
+            </form>
+          </Panel>
+
           <Panel title="Client">
             <Detail label="Name">
               {contact ? `${contact.first_name} ${contact.last_name}` : "—"}

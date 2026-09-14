@@ -13,6 +13,7 @@
     "check:actions": "tsx scripts/check-server-actions.ts",
     "check:csv": "tsx scripts/check-csv.ts",
     "check:shipping": "tsx --conditions=react-server scripts/check-shipping.ts",
+    "check:esign": "tsx --conditions=react-server scripts/check-esign.ts",
     "archive:crawl": "tsx scripts/archive-site.ts"
   },
   "dependencies": {
