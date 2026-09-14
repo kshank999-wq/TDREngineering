@@ -15,6 +15,12 @@ of service somebody has to accept. The second is one click on
 
 Everything from **Step 1** down is the first half, click by click.
 
+**These steps are also on that settings page itself**, under *Show me the
+steps*, with the redirect URIs computed from the deployment you are actually
+looking at and a button that generates the encryption key in your browser. Use
+the screen rather than this file if you are doing the setup — this file is the
+same content for whoever maintains the code, plus the reasoning below.
+
 ---
 
 ## Whether you want this at all

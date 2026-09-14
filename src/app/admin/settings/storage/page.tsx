@@ -1,10 +1,34 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { getStaffUser, supabaseServer } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
 import { keyIsUsable } from "@/lib/storage/secrets";
 import { s3Configured } from "@/lib/storage/providers";
+import { driveRedirectUri } from "@/lib/storage/google-drive";
 import { DisconnectDrive } from "@/components/admin/disconnect-drive";
+import { DriveSetupGuide } from "@/components/admin/drive-setup-guide";
+
+/**
+ * The redirect URIs to register with Google.
+ *
+ * Derived from the host actually serving this page, so whoever is reading the
+ * setup steps is shown the URI for the deployment they are on rather than one
+ * written down months ago. The eventual production domain is added alongside it
+ * when the site is not yet being served from there, because registering both
+ * now is what stops the connection breaking on the day DNS moves.
+ */
+async function redirectUrisToRegister(): Promise<string[]> {
+  const headerList = await headers();
+  const host = headerList.get("host") ?? "";
+  const proto = headerList.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+
+  const current = host ? driveRedirectUri(`${proto}://${host}`) : "";
+  const eventual = driveRedirectUri("https://www.tdrengineering.com");
+
+  const uris = [current, eventual].filter(Boolean);
+  return Array.from(new Set(uris));
+}
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +42,7 @@ export const dynamic = "force-dynamic";
 const MESSAGES: Record<string, string> = {
   forbidden: "Only an owner or manager can connect storage.",
   unconfigured:
-    "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are not set on this deployment. See docs/GOOGLE-DRIVE.md.",
+    "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are not set on this deployment. The setup steps are below.",
   nokey:
     "STORAGE_TOKEN_KEY is not set. It encrypts the Google credentials before they are stored, and connecting without it is refused.",
   denied: "The Google sign-in was cancelled. Nothing changed.",
@@ -165,26 +189,11 @@ export default async function StorageSettingsPage({
         ) : (
           <div className="mt-4">
             {!configured || !keyReady ? (
-              <div className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                <p className="font-semibold">Not ready to connect yet.</p>
-                <ul className="mt-2 list-disc space-y-1 pl-5">
-                  {!configured ? (
-                    <li>
-                      <code>GOOGLE_CLIENT_ID</code> and <code>GOOGLE_CLIENT_SECRET</code> are
-                      not set in Vercel.
-                    </li>
-                  ) : null}
-                  {!keyReady ? (
-                    <li>
-                      <code>STORAGE_TOKEN_KEY</code> is not set, or is shorter than 32
-                      characters. It encrypts the Google credentials before they are stored.
-                    </li>
-                  ) : null}
-                </ul>
-                <p className="mt-2">
-                  <code>docs/GOOGLE-DRIVE.md</code> has the steps.
-                </p>
-              </div>
+              <DriveSetupGuide
+                redirectUris={await redirectUrisToRegister()}
+                needsGoogleCredentials={!configured}
+                needsKey={!keyReady}
+              />
             ) : (
               <a
                 href="/api/storage/google/start"
@@ -217,7 +226,7 @@ export default async function StorageSettingsPage({
             detail={
               s3Configured()
                 ? "Configured in Vercel."
-                : "S3_ENDPOINT and friends are not set. See docs/CLOUD-STORAGE.md."
+                : "Not set up. An alternative to Drive for very large deliverables — ask and it can be switched on."
             }
             current={!live && s3Configured()}
           />
