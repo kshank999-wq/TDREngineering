@@ -89,6 +89,12 @@ jobs:
       - name: Marketing slug checks
         run: npm run check:slugs
 
+      # Reading a prospect spreadsheet. Import failures are silent — a parser
+      # that mishandles a quoted field puts half an address in the name column
+      # and carries on, and nobody notices until a mailing goes out.
+      - name: Prospect import checks
+        run: npm run check:import
+
       # CSV exports end up open in somebody's spreadsheet. A cell beginning
       # `=` is executed there, and client names reach these files from a public
       # form, so the escaping is a security control rather than formatting.

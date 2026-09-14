@@ -15,6 +15,7 @@
     "check:shipping": "tsx --conditions=react-server scripts/check-shipping.ts",
     "check:esign": "tsx --conditions=react-server scripts/check-esign.ts",
     "check:slugs": "tsx scripts/check-slugs.ts",
+    "check:import": "tsx scripts/check-import.ts",
     "archive:crawl": "tsx scripts/archive-site.ts"
   },
   "dependencies": {

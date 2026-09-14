@@ -21,6 +21,13 @@ export const env = {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),
+  /**
+   * Signs unsubscribe links. Set once and never rotated: changing it
+   * invalidates every opt-out link already sitting in somebody's inbox, which
+   * is the one failure CAN-SPAM actually cares about. At least 24 characters.
+   */
+  marketingUnsubscribeSecret: process.env.MARKETING_UNSUBSCRIBE_SECRET || "",
+
   turnstileSiteKey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "",
   turnstileSecretKey: process.env.TURNSTILE_SECRET_KEY || "",
 

@@ -27,6 +27,8 @@ export default function robots(): MetadataRoute.Robots {
           // advertised — staff will share one with a single prospect. The
           // pages send `noindex` themselves too.
           "/m/",
+          // An unsubscribe link is personal to one recipient.
+          "/unsubscribe/",
         ],
       },
     ],

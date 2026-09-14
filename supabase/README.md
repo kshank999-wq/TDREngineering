@@ -15,8 +15,8 @@ supabase db push
 the project SQL editor and run them in filename order: `0001_init.sql`,
 `0002_storage.sql`, `0003_shipping.sql`, `0004_merge.sql`, `0005_harden.sql`,
 `0006_jobs.sql`, `0007_job_files.sql`, `0008_billing.sql`, `0009_portal.sql`,
-`0010_proposals.sql`, `0011_marketing.sql`. All are idempotent and safe to
-re-run.
+`0010_proposals.sql`, `0011_marketing.sql`, `0012_prospects.sql`. All are
+idempotent and safe to re-run.
 
 ## What the schema gives you
 
@@ -40,6 +40,8 @@ re-run.
 | `proposals`, `proposal_lines` | What TDR offered — scope, exclusions, fee, terms. Frozen by trigger once sent (`0010`) |
 | `proposal_access_tokens` | Signing links. Only the SHA-256 of each token is stored; the raw token lives in the link and nowhere else (`0010`) |
 | `proposal_signatures`, `proposal_events` | The signature and its audit trail. Read-only to everyone signed in, owners included (`0010`) |
+| `email_suppressions` | The global do-not-email list, keyed on address. Outranks every list; `unsubscribed` and `complained` rows cannot be deleted by anyone (`0012`) |
+| `marketing_lists`, `marketing_list_members`, `marketing_imports` | Prospect lists as MEMBERSHIP over `contacts` — no second address book — plus a record of every spreadsheet loaded (`0012`) |
 | `marketing_assets`, `marketing_asset_versions` | Flyers and brochures. An asset HAS versions, one of them current, so a share link keeps serving the right file when the flyer is redesigned (`0011`) |
 
 Duplicate client records are merged by `merge_contacts()` / `merge_companies()`
@@ -73,6 +75,14 @@ public endpoint with elevated rights, so each one is locked down explicitly
   `merge_contacts()`, `merge_companies()`, `client_can_see_job()`,
   `current_client_contact()` — revoked from `public` and `anon`, granted to
   `authenticated` only.
+* `suppress_email()` is staff-only and checks `is_staff()` **inside**;
+  `record_unsubscribe()` and `is_email_suppressed()` are granted to
+  `service_role` alone for the public opt-out page; `suppress_email_internal()`
+  is granted to nobody and reached only by those two wrappers (`0012`).
+  A single function granted to `authenticated` with a caller-supplied reason
+  let any signed-in user permanently suppress arbitrary addresses — an
+  unrecoverable problem, since an opt-out cannot be deleted. The advisor found
+  it; splitting it fixed it.
 * `marketing_asset_for_public()`, `marketing_asset_download()` — same
   treatment as the signing functions below, for the same reason: the share
   page at `/m/<slug>` is anonymous (`0011`).
