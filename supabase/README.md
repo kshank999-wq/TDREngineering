@@ -13,8 +13,8 @@ supabase db push
 
 **SQL editor (fallback):** paste each file's *contents* — not its path — into
 the project SQL editor and run them in filename order: `0001_init.sql`,
-`0002_storage.sql`, `0003_shipping.sql`, `0004_merge.sql`, `0005_harden.sql`.
-All are idempotent and safe to re-run.
+`0002_storage.sql`, `0003_shipping.sql`, `0004_merge.sql`, `0005_harden.sql`,
+`0006_jobs.sql`. All are idempotent and safe to re-run.
 
 ## What the schema gives you
 
@@ -31,6 +31,8 @@ All are idempotent and safe to re-run.
 | `app_users` | Internal and future client users, with the Phase 1+ role enum |
 | `opportunity_notes`, `opportunity_status_history` | Internal notes and an audit trail of status changes |
 | `shipments` | Every shipping label bought, with the address it was printed with frozen at purchase (`0003`) |
+| `jobs` | Accepted work: number, status, dates, contract amount. Everything after a proposal attaches here (`0006`) |
+| `job_notes`, `job_status_history` | Internal notes and an audit trail of job status changes (`0006`) |
 
 Duplicate client records are merged by `merge_contacts()` / `merge_companies()`
 (`0004`) — one atomic function each, staff-gated in the database. The losing

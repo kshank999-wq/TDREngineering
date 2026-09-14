@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { supabaseServer, getStaffUser } from "@/lib/supabase/server";
 import { statusLabel, statusTone, statusClasses } from "@/content/statuses";
+import { jobStatusLabel, jobStatusTone } from "@/content/job-statuses";
 import { AddressForm, type Address } from "@/components/admin/address-form";
 import { ShippingPanel } from "@/components/admin/shipping-panel";
 import { MergePanel } from "@/components/admin/merge-panel";
@@ -80,8 +81,13 @@ export default async function ClientDetailPage({ params }: Params) {
   const foreignKey = isContact ? "contact_id" : "company_id";
   const referralKey = isContact ? "referring_contact_id" : "referring_company_id";
 
-  const [{ data: opportunities }, { data: referrals }, shipmentsResult, colleaguesResult] =
-    await Promise.all([
+  const [
+    { data: opportunities },
+    { data: referrals },
+    shipmentsResult,
+    jobsResult,
+    colleaguesResult,
+  ] = await Promise.all([
       supabase
         .from("opportunities")
         .select(
@@ -111,6 +117,12 @@ export default async function ClientDetailPage({ params }: Params) {
         .is("archived_at", null)
         .order("created_at", { ascending: false })
         .limit(25),
+      supabase
+        .from("v_job_board")
+        .select("id, job_number, name, status, contract_amount, scheduled_start")
+        .eq(foreignKey, id)
+        .order("created_at", { ascending: false })
+        .limit(25),
       // Only meaningful for a company: who works there.
       isContact
         ? Promise.resolve({ data: [] as Record<string, unknown>[] })
@@ -123,6 +135,7 @@ export default async function ClientDetailPage({ params }: Params) {
     ]);
 
   const colleagues = (colleaguesResult.data ?? []) as Record<string, unknown>[];
+  const jobs = (jobsResult.data ?? []) as Record<string, unknown>[];
   const shipments = shipmentsResult.data ?? [];
   // The shipments table arrives with migration 0003. Until it is applied the
   // query fails, and saying so beats an empty panel that looks like history.
@@ -221,6 +234,43 @@ export default async function ClientDetailPage({ params }: Params) {
             </p>
             <AddressForm kind={kind} id={id} address={address} />
           </section>
+
+          <ListPanel title={`Jobs (${jobs.length})`}>
+            {jobs.length === 0 ? (
+              <p className="text-sm text-ink-500">No jobs yet for this client.</p>
+            ) : (
+              <ul className="divide-y divide-ink-100">
+                {jobs.map((row) => (
+                  <li key={row.id as string} className="flex items-start justify-between gap-4 py-3">
+                    <div className="min-w-0">
+                      <Link
+                        href={`/admin/jobs/${row.id}`}
+                        className="font-mono text-xs font-semibold text-brand-600 hover:text-brand-500"
+                      >
+                        {row.job_number as string}
+                      </Link>
+                      <p className="text-sm text-ink-900">{row.name as string}</p>
+                      {row.contract_amount ? (
+                        <p className="mt-0.5 font-mono text-xs tabular-nums text-ink-500">
+                          {Number(row.contract_amount).toLocaleString(undefined, {
+                            style: "currency",
+                            currency: "USD",
+                          })}
+                        </p>
+                      ) : null}
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                        statusClasses[jobStatusTone(row.status as string)]
+                      }`}
+                    >
+                      {jobStatusLabel(row.status as string)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </ListPanel>
 
           <ListPanel title={`Proposal requests (${(opportunities ?? []).length})`}>
             {(opportunities ?? []).length === 0 ? (

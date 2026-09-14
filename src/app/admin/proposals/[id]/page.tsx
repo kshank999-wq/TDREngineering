@@ -6,7 +6,7 @@ import { opportunityStatuses, statusLabel, statusTone, statusClasses } from "@/c
 import { referralSourceByCode } from "@/content/referrals";
 import { questionLabel } from "@/content/services";
 import { formatBytes } from "@/lib/uploads";
-import { updateStatus, addNote } from "./actions";
+import { updateStatus, addNote, convertToJob } from "./actions";
 
 export const metadata: Metadata = { title: "Proposal request" };
 export const dynamic = "force-dynamic";
@@ -43,6 +43,13 @@ export default async function ProposalDetailPage({ params }: Params) {
     .maybeSingle();
 
   if (!opportunity) notFound();
+
+  const { data: linkedJob } = await supabase
+    .from("jobs")
+    .select("id, job_number, status")
+    .eq("opportunity_id", id)
+    .is("archived_at", null)
+    .maybeSingle();
 
   const [{ data: services }, { data: referral }, { data: files }, { data: notes }, { data: history }] =
     await Promise.all([
@@ -152,6 +159,28 @@ export default async function ProposalDetailPage({ params }: Params) {
               Update
             </button>
           </form>
+
+          {/* A proposal converts to a job exactly once. Once it has, this
+              becomes the way through to the work rather than a second button
+              that would create a duplicate. */}
+          {linkedJob ? (
+            <Link
+              href={`/admin/jobs/${linkedJob.id}`}
+              className="rounded-md border border-brand-600 px-4 py-2 text-sm font-semibold text-brand-600 hover:bg-brand-600/5"
+            >
+              Open job {linkedJob.job_number as string} →
+            </Link>
+          ) : (
+            <form action={convertToJob}>
+              <input type="hidden" name="id" value={opportunity.id as string} />
+              <button
+                type="submit"
+                className="rounded-md border border-ink-300 bg-white px-4 py-2 text-sm font-semibold text-ink-800 hover:bg-ink-50"
+              >
+                Accept &amp; create job
+              </button>
+            </form>
+          )}
         </div>
       </div>
 
