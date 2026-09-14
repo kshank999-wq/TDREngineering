@@ -15,7 +15,8 @@ supabase db push
 the project SQL editor and run them in filename order: `0001_init.sql`,
 `0002_storage.sql`, `0003_shipping.sql`, `0004_merge.sql`, `0005_harden.sql`,
 `0006_jobs.sql`, `0007_job_files.sql`, `0008_billing.sql`, `0009_portal.sql`,
-`0010_proposals.sql`. All are idempotent and safe to re-run.
+`0010_proposals.sql`, `0011_marketing.sql`. All are idempotent and safe to
+re-run.
 
 ## What the schema gives you
 
@@ -39,6 +40,7 @@ the project SQL editor and run them in filename order: `0001_init.sql`,
 | `proposals`, `proposal_lines` | What TDR offered — scope, exclusions, fee, terms. Frozen by trigger once sent (`0010`) |
 | `proposal_access_tokens` | Signing links. Only the SHA-256 of each token is stored; the raw token lives in the link and nowhere else (`0010`) |
 | `proposal_signatures`, `proposal_events` | The signature and its audit trail. Read-only to everyone signed in, owners included (`0010`) |
+| `marketing_assets`, `marketing_asset_versions` | Flyers and brochures. An asset HAS versions, one of them current, so a share link keeps serving the right file when the flyer is redesigned (`0011`) |
 
 Duplicate client records are merged by `merge_contacts()` / `merge_companies()`
 (`0004`) — one atomic function each, staff-gated in the database. The losing
@@ -71,6 +73,12 @@ public endpoint with elevated rights, so each one is locked down explicitly
   `merge_contacts()`, `merge_companies()`, `client_can_see_job()`,
   `current_client_contact()` — revoked from `public` and `anon`, granted to
   `authenticated` only.
+* `marketing_asset_for_public()`, `marketing_asset_download()` — same
+  treatment as the signing functions below, for the same reason: the share
+  page at `/m/<slug>` is anonymous (`0011`).
+* `set_current_marketing_version()` is deliberately callable by
+  `authenticated` and checks `is_staff()` inside, like `merge_contacts()`. The
+  advisor flags it; that is expected.
 * `proposal_for_signing()`, `proposal_document_for_signing()`,
   `record_proposal_view()`, `accept_proposal()`, `decline_proposal()` —
   revoked from everybody and granted back to **`service_role` alone** (`0010`).

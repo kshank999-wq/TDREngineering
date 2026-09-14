@@ -16,7 +16,18 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/admin/", "/api/", "/portal", "/portal/", "/proposal/"],
+        disallow: [
+          "/admin",
+          "/admin/",
+          "/api/",
+          "/portal",
+          "/portal/",
+          "/proposal/",
+          // Marketing assets are shared by link, which is not the same as
+          // advertised — staff will share one with a single prospect. The
+          // pages send `noindex` themselves too.
+          "/m/",
+        ],
       },
     ],
     sitemap: `${site.url}/sitemap.xml`,

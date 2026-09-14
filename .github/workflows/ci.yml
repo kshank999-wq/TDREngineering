@@ -82,6 +82,13 @@ jobs:
       - name: E-signature contract checks
         run: npm run check:esign
 
+      # Marketing share links go in emails and on printed material, and the
+      # slug has to satisfy a database check constraint written separately from
+      # the code that generates it. This checks the two agree — otherwise a
+      # title nobody thought to try fails with a raw database error.
+      - name: Marketing slug checks
+        run: npm run check:slugs
+
       # CSV exports end up open in somebody's spreadsheet. A cell beginning
       # `=` is executed there, and client names reach these files from a public
       # form, so the escaping is a security control rather than formatting.
