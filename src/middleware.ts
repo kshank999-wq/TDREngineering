@@ -2,13 +2,15 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 /**
- * Refreshes the Supabase auth session on every admin request and blocks
- * unauthenticated access to the internal proposal view (spec §10, §15).
+ * Refreshes the Supabase auth session and blocks unauthenticated access to the
+ * two signed-in areas: the internal view at /admin (spec §10, §15) and the
+ * client portal at /portal.
  *
- * Role checking happens in the layout, not here: middleware runs on the edge
- * and a database round trip on every request would be wasteful. This is the
- * cheap first gate; `getStaffUser()` is the authoritative one, and Row Level
- * Security is the backstop behind both.
+ * This only checks that somebody is signed in. WHICH of the two areas they may
+ * enter is decided by `getStaffUser()` and `getClientUser()` in the layouts,
+ * and what they can actually read is decided by the database. Middleware runs
+ * on the edge, where a role lookup would cost a round trip on every request —
+ * so it is the cheap first gate, never the only one.
  */
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -40,18 +42,21 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isLogin = pathname === "/admin/login";
+  const isPortal = pathname.startsWith("/portal");
+  const loginPath = isPortal ? "/portal/login" : "/admin/login";
+  const homePath = isPortal ? "/portal" : "/admin/proposals";
+  const isLogin = pathname === loginPath;
 
-  if (!user && pathname.startsWith("/admin") && !isLogin) {
+  if (!user && !isLogin) {
     const url = request.nextUrl.clone();
-    url.pathname = "/admin/login";
+    url.pathname = loginPath;
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
 
   if (user && isLogin) {
     const url = request.nextUrl.clone();
-    url.pathname = "/admin/proposals";
+    url.pathname = homePath;
     url.search = "";
     return NextResponse.redirect(url);
   }
@@ -60,5 +65,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/portal/:path*"],
 };

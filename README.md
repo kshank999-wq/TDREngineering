@@ -160,6 +160,7 @@ publication (spec §4).
 | `docs/JOBS.md` | Jobs — the spine that files, invoices and the portal attach to |
 | `docs/JOB-FILES.md` | Uploading, sharing and storing job files |
 | `docs/BILLING.md` | Invoices, payments and what is outstanding |
+| `docs/CLIENT-PORTAL.md` | Giving a client a login, and why they get no table access |
 | `docs/SHIPPING.md` | Printing shipping labels from a client record (Shippo) |
 | `docs/MERGING-CLIENTS.md` | Finding and merging duplicate client records |
 | `supabase/README.md` | Applying migrations, RLS model, creating admin users |

@@ -7,6 +7,7 @@ import { jobStatusLabel, jobStatusTone } from "@/content/job-statuses";
 import { AddressForm, type Address } from "@/components/admin/address-form";
 import { ShippingPanel } from "@/components/admin/shipping-panel";
 import { MergePanel } from "@/components/admin/merge-panel";
+import { PortalAccessPanel, type PortalGrant } from "@/components/admin/portal-access-panel";
 import { isShippingConfigured, isShippoTestMode } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Client" };
@@ -86,6 +87,7 @@ export default async function ClientDetailPage({ params }: Params) {
     { data: referrals },
     shipmentsResult,
     jobsResult,
+    portalResult,
     colleaguesResult,
   ] = await Promise.all([
       supabase
@@ -123,6 +125,14 @@ export default async function ClientDetailPage({ params }: Params) {
         .eq(foreignKey, id)
         .order("created_at", { ascending: false })
         .limit(25),
+      // Portal access is a person, never a firm.
+      isContact
+        ? supabase
+            .from("v_client_portal_users")
+            .select("user_id, email, company_access, is_active, invited_at, last_seen_at")
+            .eq("contact_id", id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
       // Only meaningful for a company: who works there.
       isContact
         ? Promise.resolve({ data: [] as Record<string, unknown>[] })
@@ -136,6 +146,7 @@ export default async function ClientDetailPage({ params }: Params) {
 
   const colleagues = (colleaguesResult.data ?? []) as Record<string, unknown>[];
   const jobs = (jobsResult.data ?? []) as Record<string, unknown>[];
+  const portalGrant = (portalResult.data ?? null) as PortalGrant | null;
   const shipments = shipmentsResult.data ?? [];
   // The shipments table arrives with migration 0003. Until it is applied the
   // query fails, and saying so beats an empty panel that looks like history.
@@ -469,6 +480,22 @@ export default async function ClientDetailPage({ params }: Params) {
               testMode={isShippoTestMode()}
             />
           </section>
+
+          {isContact ? (
+            <section className="rounded-xl border border-ink-200 bg-white p-6">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-500">
+                Client portal
+              </h2>
+              <div className="mt-4">
+                <PortalAccessPanel
+                  contactId={id}
+                  contactEmail={text("email")}
+                  companyName={company?.name ?? null}
+                  grant={portalGrant}
+                />
+              </div>
+            </section>
+          ) : null}
 
           <section className="rounded-xl border border-ink-200 bg-white p-6">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-500">

@@ -74,3 +74,57 @@ export async function getStaffUser(): Promise<StaffUser | null> {
     role: data.role,
   };
 }
+
+export type ClientUser = {
+  id: string;
+  email: string;
+  fullName: string | null;
+  contactId: string;
+  companyAccess: boolean;
+};
+
+/**
+ * Returns the signed-in portal client, or null.
+ *
+ * Deliberately the mirror image of `getStaffUser`: a staff member is not a
+ * client and a client is not staff, so the two never overlap and a session can
+ * only ever be one of them. What a client may actually read is decided by the
+ * database — this only establishes who is asking.
+ */
+export async function getClientUser(): Promise<ClientUser | null> {
+  if (!isSupabaseConfigured()) return null;
+
+  const supabase = await supabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from("client_portal_access")
+    .select("user_id, contact_id, company_access, is_active")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!data || !data.is_active) return null;
+
+  const { data: account } = await supabase
+    .from("app_users")
+    .select("email, full_name, role, is_active, archived_at")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  // A staff account must never resolve as a client, even if somebody added a
+  // portal grant for it by mistake.
+  if (!account || !account.is_active || account.archived_at || account.role !== "client") {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    email: account.email as string,
+    fullName: (account.full_name as string) ?? null,
+    contactId: data.contact_id as string,
+    companyAccess: Boolean(data.company_access),
+  };
+}

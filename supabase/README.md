@@ -14,8 +14,8 @@ supabase db push
 **SQL editor (fallback):** paste each file's *contents* — not its path — into
 the project SQL editor and run them in filename order: `0001_init.sql`,
 `0002_storage.sql`, `0003_shipping.sql`, `0004_merge.sql`, `0005_harden.sql`,
-`0006_jobs.sql`, `0007_job_files.sql`, `0008_billing.sql`. All are idempotent
-and safe to re-run.
+`0006_jobs.sql`, `0007_job_files.sql`, `0008_billing.sql`, `0009_portal.sql`.
+All are idempotent and safe to re-run.
 
 ## What the schema gives you
 
@@ -35,6 +35,7 @@ and safe to re-run.
 | `jobs` | Accepted work: number, status, dates, contract amount. Everything after a proposal attaches here (`0006`) |
 | `job_notes`, `job_status_history` | Internal notes and an audit trail of job status changes (`0006`) |
 | `invoices`, `invoice_lines`, `payments` | Billing. Totals derive from the lines by trigger; "paid" derives from the payments (`0008`) |
+| `client_portal_access` | Which client login may see which contact's jobs, and whether that extends to the whole firm (`0009`) |
 
 Duplicate client records are merged by `merge_contacts()` / `merge_companies()`
 (`0004`) — one atomic function each, staff-gated in the database. The losing
@@ -64,8 +65,9 @@ public endpoint with elevated rights, so each one is locked down explicitly
 (`0004`, `0005`):
 
 * `is_staff()`, `is_admin()`, `current_app_role()`, `client_impact()`,
-  `merge_contacts()`, `merge_companies()` — revoked from `public` and `anon`,
-  granted to `authenticated` only.
+  `merge_contacts()`, `merge_companies()`, `client_can_see_job()`,
+  `current_client_contact()` — revoked from `public` and `anon`, granted to
+  `authenticated` only.
 * `log_opportunity_status_change()` is a trigger function and needs no grant
   at all; PostgreSQL checks `EXECUTE` when a trigger is created, not when it
   fires.
@@ -87,6 +89,18 @@ migration that adds a function — it catches exactly this.
 * Everything the public website writes goes through `/api/proposals` and
   `/api/inquiries`, which use the **service role key** server-side. That key
   must never be exposed to the browser.
+
+### Client logins read no table at all
+
+A client (`app_users.role = 'client'`) has **no policy on `jobs`, `files`,
+`invoices` or `payments`**. RLS filters rows, not columns, so a policy letting
+a client read their own job row would also hand them `jobs.notes`. Instead they
+read four `SECURITY DEFINER` views — `v_portal_jobs`, `v_portal_files`,
+`v_portal_invoices`, `v_portal_payments` — which select only client-safe
+columns and every one of which filters through the single predicate
+`client_can_see_job()` (`0009`). Those views bypass RLS, so they are revoked
+from `anon`: an anonymous grant there would be a public read of every job.
+See `docs/CLIENT-PORTAL.md`.
 
 ## Verifying the migration landed
 
