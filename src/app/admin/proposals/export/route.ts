@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer, getStaffUser } from "@/lib/supabase/server";
+import { csvCell } from "@/lib/csv";
 
 /**
  * CSV export of proposal requests (spec §10: "Export proposal data if needed";
@@ -34,14 +35,7 @@ const COLUMNS = [
   "project_description",
 ] as const;
 
-/** RFC 4180 quoting, plus a leading apostrophe on anything a spreadsheet
- *  would otherwise evaluate as a formula. */
-function csvCell(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  let text = String(value);
-  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
-  return `"${text.replace(/"/g, '""')}"`;
-}
+
 
 export async function GET(request: Request) {
   const staff = await getStaffUser();

@@ -48,6 +48,9 @@ failing with a 500 when it is unconfigured.
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
 | `npm run check:content` | List content still awaiting TDR (spec §22) |
+| `npm run check:actions` | Verify every `"use server"` file exports only async functions |
+| `npm run check:csv` | Verify CSV exports are quoted and formula-safe |
+| `npm run check:shipping` | Contract tests for the Shippo client (stubbed, no network) |
 | `npm run archive:crawl` | Phase 1A legacy site archive (see below) |
 
 CI (`.github/workflows/ci.yml`) runs lint, typecheck and build on every pull

@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { supabaseServer, getStaffUser } from "@/lib/supabase/server";
 import { invoiceStates, invoiceStateLabel, invoiceStateTone, owingStates, money } from "@/content/billing";
 import { statusClasses } from "@/content/statuses";
+import { markExported } from "./[id]/actions";
 
 export const metadata: Metadata = { title: "Invoices" };
 export const dynamic = "force-dynamic";
@@ -51,6 +52,22 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Sea
   const overdue = (owingAll ?? [])
     .filter((r) => r.state === "overdue")
     .reduce((s, r) => s + Number(r.balance ?? 0), 0);
+
+  // What accounting has not been given yet. Drafts are excluded: a draft is
+  // not a document anyone should be posting to the books.
+  const [{ count: pendingInvoices }, { count: pendingPayments }] = await Promise.all([
+    supabase
+      .from("invoices")
+      .select("id", { count: "exact", head: true })
+      .is("exported_at", null)
+      .is("archived_at", null)
+      .neq("status", "draft"),
+    supabase
+      .from("payments")
+      .select("id", { count: "exact", head: true })
+      .is("exported_at", null)
+      .is("archived_at", null),
+  ]);
 
   const qs = (over: Record<string, string>) =>
     new URLSearchParams({ q: query, state, ...over }).toString();
@@ -173,6 +190,64 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Sea
           </tbody>
         </table>
       </div>
+
+      <section className="mt-10 rounded-xl border border-ink-200 bg-white p-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-500">
+          Export to accounting
+        </h2>
+        <p className="mt-2 max-w-prose text-sm text-ink-600">
+          Hands invoices and payments to QuickBooks. Records flow out only — this system
+          keeps the numbering and nothing comes back.
+        </p>
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          {([
+            ["invoices", "Invoices", pendingInvoices ?? 0, "One row per line item, in QuickBooks' import shape. Drafts are never included."],
+            ["payments", "Payments", pendingPayments ?? 0, "What has been received, against the invoice it settles."],
+          ] as const).map(([kind, label, pending, hint]) => (
+            <div key={kind} className="rounded-lg border border-ink-200 p-4">
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="text-sm font-semibold text-ink-900">{label}</h3>
+                <span className="font-mono text-sm tabular-nums text-ink-600">
+                  {pending} waiting
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-ink-500">{hint}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <a
+                  href={`/admin/invoices/export?type=${kind}&pending=true`}
+                  className="rounded-md border border-ink-200 bg-white px-3 py-1.5 text-xs font-semibold text-ink-800 hover:bg-ink-50"
+                >
+                  Download waiting
+                </a>
+                <a
+                  href={`/admin/invoices/export?type=${kind}&pending=false`}
+                  className="rounded-md px-2 py-1.5 text-xs font-medium text-ink-500 hover:text-ink-800"
+                >
+                  Download everything
+                </a>
+                {pending > 0 ? (
+                  <form action={markExported} className="ml-auto">
+                    <input type="hidden" name="kind" value={kind} />
+                    <button
+                      type="submit"
+                      className="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-800 hover:bg-ink-50"
+                    >
+                      Mark {pending} exported
+                    </button>
+                  </form>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-4 text-xs text-ink-500">
+          Download first, import into QuickBooks, and only mark them exported once the import
+          is accepted. Marking is separate on purpose — nothing is stamped just because a file
+          was downloaded.
+        </p>
+      </section>
 
       {pages > 1 ? (
         <nav className="mt-6 flex items-center justify-between" aria-label="Pagination">

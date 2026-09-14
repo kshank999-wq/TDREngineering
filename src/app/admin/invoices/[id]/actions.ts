@@ -214,3 +214,41 @@ export async function archivePayment(formData: FormData) {
   revalidatePath(`/admin/invoices/${id}`);
   revalidatePath("/admin/invoices");
 }
+
+/**
+ * Marks everything currently pending as handed to accounting.
+ *
+ * Deliberately separate from the download, and deliberately taken *after* the
+ * import is accepted. A GET that marked rows on download would fire on a link
+ * prefetch and quietly mark a batch nobody imported — and there is no way to
+ * tell afterwards which invoices those were.
+ */
+export async function markExported(formData: FormData) {
+  const staff = await getStaffUser();
+  if (!staff) throw new Error("Not authorized");
+
+  const kind = String(formData.get("kind") ?? "invoices");
+  const stamp = new Date().toISOString();
+  const batch = `${kind}-${stamp.slice(0, 19).replace(/[:T]/g, "")}`;
+
+  const supabase = await supabaseServer();
+
+  if (kind === "payments") {
+    const { error } = await supabase
+      .from("payments")
+      .update({ exported_at: stamp, export_batch: batch })
+      .is("exported_at", null)
+      .is("archived_at", null);
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase
+      .from("invoices")
+      .update({ exported_at: stamp, export_batch: batch })
+      .is("exported_at", null)
+      .is("archived_at", null)
+      .neq("status", "draft");
+    if (error) throw new Error(error.message);
+  }
+
+  revalidatePath("/admin/invoices");
+}
