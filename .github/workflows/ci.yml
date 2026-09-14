@@ -95,6 +95,13 @@ jobs:
       - name: Prospect import checks
         run: npm run check:import
 
+      # Presigned URLs for cloud object storage. The signature is hand-rolled
+      # rather than pulled from the AWS SDK, so it is checked against
+      # signatures that SDK actually produced. A wrong signature is rejected by
+      # the provider, which means broken uploads and unreachable deliverables.
+      - name: Object storage checks
+        run: npm run check:storage
+
       # CSV exports end up open in somebody's spreadsheet. A cell beginning
       # `=` is executed there, and client names reach these files from a public
       # form, so the escaping is a security control rather than formatting.

@@ -1,8 +1,8 @@
 "use server";
 
 import { getClientUser, supabaseServer } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 import { DOWNLOAD_TTL_SECONDS } from "@/lib/storage/job-files";
+import { signedDownloadUrl } from "@/lib/storage/providers";
 
 /**
  * Portal server actions.
@@ -31,20 +31,25 @@ export async function getPortalDownloadUrl(
   const supabase = await supabaseServer();
   const { data: file } = await supabase
     .from("v_portal_files")
-    .select("storage_bucket, storage_path, original_filename")
+    .select("storage_provider, storage_bucket, storage_path, original_filename")
     .eq("id", fileId)
     .maybeSingle();
 
   if (!file) return { ok: false, error: "That file is not available." };
 
-  const { data, error } = await supabaseAdmin()
-    .storage.from(file.storage_bucket as string)
-    .createSignedUrl(file.storage_path as string, DOWNLOAD_TTL_SECONDS, {
-      download: file.original_filename as string,
-    });
+  // Only now — after the database has released the row — is storage reached,
+  // and via the provider recorded on the file itself. A deliverable uploaded
+  // before the move to cloud storage and one uploaded after both download.
+  const signed = await signedDownloadUrl({
+    provider: file.storage_provider as string,
+    bucket: file.storage_bucket as string,
+    path: file.storage_path as string,
+    expiresIn: DOWNLOAD_TTL_SECONDS,
+    downloadAs: file.original_filename as string,
+  });
 
-  if (error || !data) return { ok: false, error: "Could not prepare that download." };
-  return { ok: true, url: data.signedUrl };
+  if (!signed.ok) return { ok: false, error: "Could not prepare that download." };
+  return { ok: true, url: signed.url };
 }
 
 /** Records that the client has been in, so staff can see the portal is used. */

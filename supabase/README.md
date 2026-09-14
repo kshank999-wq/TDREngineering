@@ -15,8 +15,8 @@ supabase db push
 the project SQL editor and run them in filename order: `0001_init.sql`,
 `0002_storage.sql`, `0003_shipping.sql`, `0004_merge.sql`, `0005_harden.sql`,
 `0006_jobs.sql`, `0007_job_files.sql`, `0008_billing.sql`, `0009_portal.sql`,
-`0010_proposals.sql`, `0011_marketing.sql`, `0012_prospects.sql`. All are
-idempotent and safe to re-run.
+`0010_proposals.sql`, `0011_marketing.sql`, `0012_prospects.sql`,
+`0013_storage_provider.sql`. All are idempotent and safe to re-run.
 
 ## What the schema gives you
 
@@ -28,7 +28,7 @@ idempotent and safe to re-run.
 | `opportunities` | Proposal requests / potential projects — the source of truth for an inbound request |
 | `referrals` | The relationship between a referral source and an opportunity |
 | `services` / `opportunity_services` | Service catalog and the services requested on each opportunity |
-| `files` | Metadata for documents — proposal attachments and job files. Bytes live in Storage; `storage_provider` is per row so they can move (`0001`, `0007`) |
+| `files` | Metadata for documents — proposal attachments and job files. Bytes live in Storage; `storage_provider` is per row so they can move, which `0013` cashes in: job files go to S3-compatible cloud storage when configured, and every download routes by the provider on the file's own row (`0001`, `0007`, `0013`) |
 | `website_inquiries` | General contact-page inquiries |
 | `app_users` | Internal and future client users, with the Phase 1+ role enum |
 | `opportunity_notes`, `opportunity_status_history` | Internal notes and an audit trail of status changes |

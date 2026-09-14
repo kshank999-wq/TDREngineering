@@ -63,7 +63,12 @@ export function JobFilesPanel({ jobId, files }: { jobId: string; files: JobFile[
     for (const file of chosen) {
       setProgress({ name: file.name, pct: 0 });
 
-      const ticket = await requestUpload({ jobId, filename: file.name, size: file.size });
+      const ticket = await requestUpload({
+        jobId,
+        filename: file.name,
+        size: file.size,
+        contentType: file.type || "application/octet-stream",
+      });
       if (!ticket.ok) {
         setError(ticket.error);
         setProgress(null);
@@ -72,22 +77,40 @@ export function JobFilesPanel({ jobId, files }: { jobId: string; files: JobFile[
 
       setProgress({ name: file.name, pct: 35 });
 
-      const { error: uploadError } = await supabase.storage
-        .from(ticket.bucket)
-        .uploadToSignedUrl(ticket.path, ticket.token, file, {
-          contentType: file.type || "application/octet-stream",
+      // Two providers, two shapes. Cloud storage takes a plain PUT to the
+      // presigned URL; Supabase needs its own token. Either way the bytes go
+      // straight from the browser to storage and never through the server.
+      if (ticket.provider === "s3") {
+        const response = await fetch(ticket.uploadUrl, {
+          method: "PUT",
+          body: file,
+          headers: ticket.headers,
         });
+        if (!response.ok) {
+          setError(`${file.name} did not upload (${response.status}). Try again.`);
+          setProgress(null);
+          return;
+        }
+      } else {
+        const { error: uploadError } = await supabase.storage
+          .from(ticket.bucket)
+          .uploadToSignedUrl(ticket.path, ticket.token ?? "", file, {
+            contentType: file.type || "application/octet-stream",
+          });
 
-      if (uploadError) {
-        setError(`${file.name} did not upload: ${uploadError.message}`);
-        setProgress(null);
-        return;
+        if (uploadError) {
+          setError(`${file.name} did not upload: ${uploadError.message}`);
+          setProgress(null);
+          return;
+        }
       }
 
       setProgress({ name: file.name, pct: 85 });
 
       const recorded = await recordUpload({
         jobId,
+        provider: ticket.provider,
+        bucket: ticket.bucket,
         path: ticket.path,
         filename: file.name,
         contentType: file.type || "application/octet-stream",

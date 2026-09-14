@@ -8,9 +8,15 @@ import {
   JOB_FILES_BUCKET,
   MAX_JOB_FILE_BYTES,
   DOWNLOAD_TTL_SECONDS,
+  UPLOAD_TTL_SECONDS,
   jobFilePath,
   formatBytes,
 } from "@/lib/storage/job-files";
+import {
+  signedUploadTarget,
+  signedDownloadUrl,
+  objectExists,
+} from "@/lib/storage/providers";
 
 /**
  * Server actions for a job.
@@ -110,7 +116,17 @@ export async function addJobNote(formData: FormData) {
 // ------------------------------------------------------------- files ------
 
 export type UploadTicket =
-  | { ok: true; path: string; token: string; bucket: string }
+  | {
+      ok: true;
+      /** Which storage the browser should send to, and therefore how. */
+      provider: "supabase" | "s3";
+      bucket: string;
+      path: string;
+      uploadUrl: string;
+      /** Supabase's signed-upload token. Null for cloud storage. */
+      token: string | null;
+      headers: Record<string, string>;
+    }
   | { ok: false; error: string };
 
 /**
@@ -125,6 +141,7 @@ export async function requestUpload(input: {
   jobId: string;
   filename: string;
   size: number;
+  contentType?: string;
 }): Promise<UploadTicket> {
   const staff = await getStaffUser();
   if (!staff) return { ok: false, error: "Not authorized. Sign in again." };
@@ -143,15 +160,28 @@ export async function requestUpload(input: {
   }
 
   const path = jobFilePath(input.jobId, input.filename);
-  const supabase = await supabaseServer();
-  const { data, error } = await supabase.storage
-    .from(JOB_FILES_BUCKET)
-    .createSignedUploadUrl(path);
 
-  if (error || !data) {
-    return { ok: false, error: error?.message ?? "Could not start the upload." };
-  }
-  return { ok: true, path: data.path, token: data.token, bucket: JOB_FILES_BUCKET };
+  // Where this goes is decided by `signedUploadTarget`, not here: cloud storage
+  // when it is configured, Supabase otherwise. The browser is told which, so it
+  // knows how to send the bytes.
+  const target = await signedUploadTarget({
+    bucket: JOB_FILES_BUCKET,
+    path,
+    expiresIn: UPLOAD_TTL_SECONDS,
+    contentType: input.contentType ?? null,
+  });
+
+  if (!target.ok) return { ok: false, error: target.error };
+
+  return {
+    ok: true,
+    provider: target.provider,
+    bucket: target.bucket,
+    path: target.path,
+    uploadUrl: target.uploadUrl,
+    token: target.token ?? null,
+    headers: target.headers,
+  };
 }
 
 /**
@@ -163,6 +193,8 @@ export async function requestUpload(input: {
  */
 export async function recordUpload(input: {
   jobId: string;
+  provider: string;
+  bucket: string;
   path: string;
   filename: string;
   contentType: string;
@@ -181,13 +213,10 @@ export async function recordUpload(input: {
   const supabase = await supabaseServer();
 
   // Confirm the bytes are really there before claiming the file exists.
-  const folder = input.path.split("/").slice(0, -1).join("/");
-  const name = input.path.split("/").pop() ?? "";
-  const { data: listed } = await supabase.storage
-    .from(JOB_FILES_BUCKET)
-    .list(folder, { search: name });
+  const provider = input.provider === "s3" ? "s3" : "supabase";
+  const bucket = input.bucket || JOB_FILES_BUCKET;
 
-  if (!listed?.some((entry) => entry.name === name)) {
+  if (!(await objectExists({ provider, bucket, path: input.path }))) {
     return {
       ok: false,
       error: "The upload did not finish — nothing was saved. Try again.",
@@ -196,8 +225,9 @@ export async function recordUpload(input: {
 
   const { error } = await supabase.from("files").insert({
     job_id: input.jobId,
-    storage_provider: "supabase",
-    storage_bucket: JOB_FILES_BUCKET,
+    // Recorded per file, so this row keeps working after the provider changes.
+    storage_provider: provider,
+    storage_bucket: bucket,
     storage_path: input.path,
     original_filename: input.filename.slice(0, 200),
     content_type: input.contentType || null,
@@ -229,21 +259,22 @@ export async function getDownloadUrl(
   const supabase = await supabaseServer();
   const { data: file } = await supabase
     .from("files")
-    .select("storage_bucket, storage_path, original_filename")
+    .select("storage_provider, storage_bucket, storage_path, original_filename")
     .eq("id", fileId)
     .is("archived_at", null)
     .maybeSingle();
 
   if (!file) return { ok: false, error: "File not found." };
 
-  const { data, error } = await supabase.storage
-    .from(file.storage_bucket as string)
-    .createSignedUrl(file.storage_path as string, DOWNLOAD_TTL_SECONDS, {
-      download: file.original_filename as string,
-    });
-
-  if (error || !data) return { ok: false, error: error?.message ?? "Could not create a link." };
-  return { ok: true, url: data.signedUrl };
+  // The provider comes from the file's own row, so a file uploaded to Supabase
+  // last month and one uploaded to cloud storage today both work.
+  return signedDownloadUrl({
+    provider: file.storage_provider as string,
+    bucket: file.storage_bucket as string,
+    path: file.storage_path as string,
+    expiresIn: DOWNLOAD_TTL_SECONDS,
+    downloadAs: file.original_filename as string,
+  });
 }
 
 /** The portal gate. Flipping this is what exposes a file to a client. */

@@ -28,6 +28,17 @@ export const env = {
    */
   marketingUnsubscribeSecret: process.env.MARKETING_UNSUBSCRIBE_SECRET || "",
 
+  // --- Cloud object storage (S3-compatible: R2, B2, Wasabi, S3) ---------
+  // When all four are set, NEW job-file uploads go here instead of Supabase.
+  // Files already stored elsewhere keep working: every download reads the
+  // provider from the file's own row, so the migration is per file rather
+  // than a cutover. See docs/CLOUD-STORAGE.md.
+  s3Endpoint: process.env.S3_ENDPOINT || "",
+  s3Region: process.env.S3_REGION || "auto",
+  s3Bucket: process.env.S3_BUCKET || "",
+  s3AccessKeyId: process.env.S3_ACCESS_KEY_ID || "",
+  s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
+
   turnstileSiteKey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "",
   turnstileSecretKey: process.env.TURNSTILE_SECRET_KEY || "",
 
